@@ -279,11 +279,8 @@ def call_gemini(api_key: str, prompt: str) -> str:
     Connects to Google Gemini Generative AI to produce personalized clinical triage.
     """
     endpoints_to_try = [
-        ("v1beta", "gemini-3.6-flash"),
-        ("v1beta", "gemini-3.5-flash"),
-        ("v1beta", "gemini-3-flash-preview"),
-        ("v1beta", "gemini-3.7-flash"),
-        ("v1beta", "gemini-flash-latest"),
+        ("v1beta", "gemini-3.6-flash", 4),
+        ("v1beta", "gemini-3.5-flash", 4),
     ]
     
     headers = {"Content-Type": "application/json"}
@@ -322,10 +319,10 @@ def call_gemini(api_key: str, prompt: str) -> str:
     }
 
     last_err = None
-    for version, model in endpoints_to_try:
+    for version, model, timeout_sec in endpoints_to_try:
         url = f"https://generativelanguage.googleapis.com/{version}/models/{model}:generateContent?key={api_key}"
         try:
-            resp = requests.post(url, json=body, headers=headers, timeout=6)
+            resp = requests.post(url, json=body, headers=headers, timeout=timeout_sec)
             if resp.status_code == 200:
                 data = resp.json()
                 candidates = data.get("candidates", [])
