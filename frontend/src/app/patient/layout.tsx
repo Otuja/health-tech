@@ -32,7 +32,16 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     }
   }, [router]);
 
-  const navItems = [
+interface NavItem {
+  name: string;
+  shortName: string;
+  href: string;
+  icon: any;
+  isCenter?: boolean;
+  isSpecial?: boolean;
+}
+
+  const navItems: NavItem[] = [
     { name: "Dashboard", shortName: "Home", href: "/patient/dashboard", icon: LayoutDashboard },
     { name: "Appointments", shortName: "Visits", href: "/patient/appointments", icon: Calendar },
     { name: "AI Symptom Triage", shortName: "AI Triage", href: "/patient/triage", icon: Bot, isCenter: true },

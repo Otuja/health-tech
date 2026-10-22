@@ -137,27 +137,6 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const [callEndedModalOpen, setCallEndedModalOpen] = useState(false);
   const [callEndedData, setCallEndedData] = useState<CallEndedData | null>(null);
 
-  // Reconnection Helper
-  const handleReconnect = useCallback(async () => {
-    toast.loading("Reconnecting P2P video stream...", { id: "reconnect-call" });
-    try {
-      await sendSignal("reset");
-      lastSignalIdRef.current = 0;
-      queuedCandidates.current = [];
-      if (streamRef.current) {
-        initPeerConnection(streamRef.current);
-        await sendSignal("join", { timestamp: Date.now() });
-        const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
-        if (currentRole === "DOCTOR") {
-          setTimeout(createAndSendOffer, 900);
-        }
-      }
-      toast.success("Stream re-initialized", { id: "reconnect-call" });
-    } catch {
-      toast.error("Failed to re-initialize stream", { id: "reconnect-call" });
-    }
-  }, [sendSignal, initPeerConnection, createAndSendOffer]);
-
   // Timer Effect
   useEffect(() => {
     if (callEndedModalOpen) return;
@@ -340,6 +319,27 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
       makingOfferRef.current = false;
     }
   }, [sendSignal]);
+
+  // Reconnection Helper
+  const handleReconnect = useCallback(async () => {
+    toast.loading("Reconnecting P2P video stream...", { id: "reconnect-call" });
+    try {
+      await sendSignal("reset");
+      lastSignalIdRef.current = 0;
+      queuedCandidates.current = [];
+      if (streamRef.current) {
+        initPeerConnection(streamRef.current);
+        await sendSignal("join", { timestamp: Date.now() });
+        const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
+        if (currentRole === "DOCTOR") {
+          setTimeout(createAndSendOffer, 900);
+        }
+      }
+      toast.success("Stream re-initialized", { id: "reconnect-call" });
+    } catch {
+      toast.error("Failed to re-initialize stream", { id: "reconnect-call" });
+    }
+  }, [sendSignal, initPeerConnection, createAndSendOffer]);
 
   // Handle incoming signaling messages from other device
   const handleSignal = useCallback(async (sig: SignalItem) => {
