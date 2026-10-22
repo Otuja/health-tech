@@ -57,12 +57,10 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'ADMIN' or user.is_staff:
+        if user.role == 'ADMIN' or user.is_staff or user.role == 'DOCTOR':
             return Appointment.objects.all()
         elif user.role == 'PATIENT':
             return Appointment.objects.filter(patient=user)
-        elif user.role == 'DOCTOR':
-            return Appointment.objects.filter(doctor=user)
         return Appointment.objects.none()
 
     @action(detail=True, methods=['patch'], url_path='status')

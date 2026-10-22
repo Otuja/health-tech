@@ -14,7 +14,8 @@ import {
   Stethoscope, 
   Menu, 
   X,
-  ShieldAlert
+  ShieldAlert,
+  User
 } from "lucide-react";
 
 export default function DoctorLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
     { name: "My Schedule & Slots", href: "/doctor/appointments", icon: Calendar },
     { name: "Assigned Patients", href: "/doctor/patients", icon: Users },
     { name: "Medical Records & Patient EHR", href: "/doctor/records", icon: FileText },
+    { name: "Doctor Profile & Credentials", href: "/doctor/profile", icon: User },
   ];
 
   const handleLogout = () => {

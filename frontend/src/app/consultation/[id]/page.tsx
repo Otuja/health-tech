@@ -24,7 +24,9 @@ import {
   X,
   CheckCircle2,
   ArrowRight,
-  Activity
+  Activity,
+  RotateCw,
+  AlertCircle
 } from "lucide-react";
 
 interface AppointmentData {
@@ -74,9 +76,25 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
+    { urls: "stun:openrelay.metered.ca:80" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelay",
+      credential: "openrelay",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelay",
+      credential: "openrelay",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelay",
+      credential: "openrelay",
+    },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 export default function ConsultationRoom({ params }: { params: Promise<{ id: string }> }) {
@@ -86,6 +104,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
   const [appointment, setAppointment] = useState<AppointmentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [appointmentNotFound, setAppointmentNotFound] = useState(false);
   const [userRole, setUserRole] = useState<string>("PATIENT");
 
   // Call Controls State
@@ -117,6 +136,27 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   // Call Ended Modal State (Industrial Standard Notification)
   const [callEndedModalOpen, setCallEndedModalOpen] = useState(false);
   const [callEndedData, setCallEndedData] = useState<CallEndedData | null>(null);
+
+  // Reconnection Helper
+  const handleReconnect = useCallback(async () => {
+    toast.loading("Reconnecting P2P video stream...", { id: "reconnect-call" });
+    try {
+      await sendSignal("reset");
+      lastSignalIdRef.current = 0;
+      queuedCandidates.current = [];
+      if (streamRef.current) {
+        initPeerConnection(streamRef.current);
+        await sendSignal("join", { timestamp: Date.now() });
+        const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
+        if (currentRole === "DOCTOR") {
+          setTimeout(createAndSendOffer, 900);
+        }
+      }
+      toast.success("Stream re-initialized", { id: "reconnect-call" });
+    } catch {
+      toast.error("Failed to re-initialize stream", { id: "reconnect-call" });
+    }
+  }, [sendSignal, initPeerConnection, createAndSendOffer]);
 
   // Timer Effect
   useEffect(() => {
@@ -180,6 +220,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           setCallEndedModalOpen(true);
         }
       } else {
+        setAppointmentNotFound(true);
         toast.error("Consultation room not found or session has expired.");
       }
     } catch {
@@ -202,6 +243,8 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [appointmentId]);
 
+  const makingOfferRef = useRef<boolean>(false);
+
   // Initialize WebRTC Peer Connection
   const initPeerConnection = useCallback((localStream: MediaStream) => {
     if (peerRef.current) {
@@ -217,23 +260,40 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
       pc.addTrack(track, localStream);
     });
 
-    // Handle incoming remote media tracks from other device
+    // Handle incoming remote media tracks from other device (supports mobile streams & individual tracks)
     pc.ontrack = (event) => {
+      let targetStream: MediaStream;
       if (event.streams && event.streams[0]) {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-          remoteVideoRef.current.play().catch(() => {
-            setAudioNeedsUnlock(true);
-          });
-        }
-        setRemoteStreamActive(true);
+        targetStream = event.streams[0];
+      } else {
+        const existing = remoteVideoRef.current?.srcObject as MediaStream;
+        targetStream = existing || new MediaStream();
+        targetStream.addTrack(event.track);
       }
+
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = targetStream;
+        remoteVideoRef.current.play().catch(() => {
+          setAudioNeedsUnlock(true);
+        });
+      }
+      setRemoteStreamActive(true);
     };
 
-    // Broadcast local ICE candidates to peer through signaling channel
+    // Batch ICE candidates to prevent flooding mobile networks
+    let iceTimeout: any = null;
+    let pendingIceList: any[] = [];
+
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        sendSignal("ice-candidate", event.candidate.toJSON());
+        pendingIceList.push(event.candidate.toJSON());
+        clearTimeout(iceTimeout);
+        iceTimeout = setTimeout(() => {
+          if (pendingIceList.length > 0) {
+            sendSignal("ice-candidate-batch", pendingIceList);
+            pendingIceList = [];
+          }
+        }, 120);
       }
     };
 
@@ -244,6 +304,9 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         setRemoteStreamActive(true);
       } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
         setRemoteStreamActive(false);
+        if (pc.connectionState === "failed") {
+          pc.restartIce?.();
+        }
       }
     };
 
@@ -256,20 +319,25 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     return pc;
   }, [sendSignal]);
 
-  // Initiate an offer
+  // Initiate an offer with in-flight guard to prevent glare
   const createAndSendOffer = useCallback(async () => {
     const pc = peerRef.current;
-    if (!pc) return;
+    if (!pc || makingOfferRef.current) return;
+    if (pc.signalingState !== "stable") return;
 
     try {
+      makingOfferRef.current = true;
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
       });
+      if (pc.signalingState !== "stable") return;
       await pc.setLocalDescription(offer);
       await sendSignal("offer", offer);
     } catch (err) {
       console.warn("Failed creating offer:", err);
+    } finally {
+      makingOfferRef.current = false;
     }
   }, [sendSignal]);
 
@@ -302,10 +370,17 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
       if (sig.type === "join") {
         const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
-        if (currentRole === "DOCTOR") {
+        if (currentRole === "DOCTOR" && pc.signalingState === "stable") {
           await createAndSendOffer();
         }
       } else if (sig.type === "offer") {
+        if (pc.signalingState !== "stable") {
+          try {
+            await pc.setLocalDescription({ type: "rollback" } as any);
+          } catch {
+            // continue
+          }
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
         
         while (queuedCandidates.current.length > 0) {
@@ -329,12 +404,17 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             }
           }
         }
-      } else if (sig.type === "ice-candidate") {
-        if (sig.payload) {
+      } else if (sig.type === "ice-candidate-batch" || sig.type === "ice-candidate") {
+        const candidates = sig.type === "ice-candidate-batch" && Array.isArray(sig.payload) 
+          ? sig.payload 
+          : [sig.payload];
+
+        for (const cand of candidates) {
+          if (!cand) continue;
           if (pc.remoteDescription && pc.remoteDescription.type) {
-            await pc.addIceCandidate(new RTCIceCandidate(sig.payload)).catch(() => {});
+            await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
           } else {
-            queuedCandidates.current.push(sig.payload);
+            queuedCandidates.current.push(cand);
           }
         }
       }
@@ -569,6 +649,38 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   };
 
+  if (appointmentNotFound && !loading) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 shadow-xl">
+            <Stethoscope className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold font-heading text-white">
+            Consultation Encounter Not Found
+          </h2>
+          <p className="text-sm text-slate-400 max-w-md mt-2 leading-relaxed">
+            Consultation #{appointmentId} was not found, has already been completed, or is not assigned to your account.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+            <Link
+              href={userRole === "DOCTOR" ? "/doctor/appointments" : "/patient/appointments"}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-lg shadow-emerald-600/20"
+            >
+              View Scheduled Consultations
+            </Link>
+            <Link
+              href={userRole === "DOCTOR" ? "/doctor/dashboard" : "/patient/dashboard"}
+              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-colors border border-slate-700"
+            >
+              Return to Dashboard
+            </Link>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between relative overflow-hidden font-sans">
@@ -605,6 +717,15 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                 <span>Tap to Enable Audio</span>
               </button>
             )}
+
+            <button
+              onClick={handleReconnect}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors active:scale-95"
+              title="Reset P2P video stream if connection stalled"
+            >
+              <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Reconnect</span>
+            </button>
 
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono font-medium text-slate-300">
               <Clock className="w-3.5 h-3.5 text-emerald-400" />

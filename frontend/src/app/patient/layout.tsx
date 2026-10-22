@@ -37,7 +37,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     { name: "Appointments", shortName: "Visits", href: "/patient/appointments", icon: Calendar },
     { name: "AI Symptom Triage", shortName: "AI Triage", href: "/patient/triage", icon: Bot, isCenter: true },
     { name: "Medical Records & EHR", shortName: "Records", href: "/patient/records", icon: FileText },
-    { name: "Emergency Vitals Pass", shortName: "Emergency", href: "/patient/emergency", icon: ShieldAlert, isSpecial: true },
+    { name: "My Profile & Health", shortName: "Profile", href: "/patient/profile", icon: User },
   ];
 
   const handleLogout = () => {
@@ -138,6 +138,17 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
           </div>
 
           <div className="pt-6 border-t border-slate-100 space-y-3">
+            <Link
+              href="/patient/emergency"
+              className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors text-xs font-bold"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-red-600" />
+                <span>Emergency SOS Pass</span>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+            </Link>
+
             <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100/80 flex items-center gap-2 text-[11px] text-emerald-800 font-semibold">
               <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               <span>NDPR Protected Session</span>
