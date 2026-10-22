@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
-from .models import Slot, Appointment, ConsultationMessage
+from .models import Slot, Appointment, ConsultationMessage, ConsultationSignal
 from .serializers import SlotSerializer, AppointmentSerializer, ConsultationMessageSerializer
 
 class SlotViewSet(viewsets.ModelViewSet):
@@ -114,6 +114,10 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='simulate-reply')
     def simulate_reply(self, request, pk=None):
+        return Response({"detail": "Automated simulated replies are disabled. Live peer messaging is active."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='signal')
+    def send_signal(self, request, pk=None):
         appointment = self.get_object()
         user = request.user
         
@@ -121,52 +125,61 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
         is_participant = (user == appointment.patient or user == appointment.doctor or user.role == 'ADMIN' or user.is_staff)
         if not is_participant:
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
-        
-        # Determine who replies
-        if user == appointment.patient or user.role == 'PATIENT':
-            partner = appointment.doctor
-            is_doctor_reply = True
-        else:
-            partner = appointment.patient
-            is_doctor_reply = False
-            
-        last_msg = appointment.messages.filter(sender=user).last()
-        last_text = last_msg.text.lower() if last_msg else ""
-        
-        doctor_name = partner.get_full_name() or partner.username
-        
-        if is_doctor_reply:
-            if any(k in last_text for k in ['pain', 'hurt', 'chest', 'pressure', 'heart', 'breath', 'dizzy']):
-                reply_text = f"Thank you for sharing that with me. On a scale of 1 to 10, how intense is the discomfort? Please remain seated, breathe slowly, and let me know if it radiates to your left arm or jaw."
-            elif any(k in last_text for k in ['bp', 'blood pressure', 'pulse', 'vital', 'bpm', 'reading']):
-                reply_text = f"I've recorded those vitals into your encounter chart. They look consistent with your baseline. Let's monitor your blood pressure closely during this session."
-            elif any(k in last_text for k in ['medication', 'pill', 'dose', 'drug', 'prescription', 'refill']):
-                reply_text = f"I have your active medication list open in your EHR. I can adjust your dosage or transmit a digital prescription directly to your pharmacy today."
-            elif any(k in last_text for k in ['headache', 'fever', 'cough', 'cold', 'temperature', 'throat']):
-                reply_text = f"Noted. How long have you experienced these symptoms? Make sure to stay hydrated, and I will note this in your clinical assessment."
-            elif any(k in last_text for k in ['hello', 'hi', 'morning', 'afternoon', 'hey', 'doctor']):
-                reply_text = f"Hello! I am {doctor_name}. I have your patient file open. How are you feeling today, and what symptoms would you like us to address?"
-            elif any(k in last_text for k in ['bye', 'thank', 'thanks', 'done', 'okay', 'ok', 'good']):
-                reply_text = f"You are very welcome! Take care and don't hesitate to reach back out if symptoms worsen. You can conclude our video call whenever you are ready."
-            else:
-                reply_text = f"I have noted your observation in your clinical chart. Can you tell me if this symptom is intermittent or constant throughout the day?"
-        else:
-            if any(k in last_text for k in ['hello', 'hi', 'how are you']):
-                reply_text = "Hello Doctor, thank you for checking in on me today. I am ready for our consultation."
-            elif any(k in last_text for k in ['pain', 'scale', 'feel', 'intense']):
-                reply_text = "The pain is about a 4 out of 10 today, mostly when I am active or moving."
-            elif any(k in last_text for k in ['medication', 'dose', 'pill']):
-                reply_text = "Yes Doctor, I've taken the morning dose with breakfast as instructed."
-            else:
-                reply_text = "Thank you Doctor, I understand and will follow these instructions."
 
-        reply_msg = ConsultationMessage.objects.create(
+        signal_type = request.data.get('type')
+        payload = request.data.get('payload', {})
+        if not signal_type:
+            return Response({"detail": "Signal type is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Allow resetting signaling session on fresh reconnect
+        if signal_type == 'reset':
+            ConsultationSignal.objects.filter(appointment=appointment).delete()
+            return Response({"status": "signals_cleared"}, status=status.HTTP_200_OK)
+
+        sig = ConsultationSignal.objects.create(
             appointment=appointment,
-            sender=partner,
-            text=reply_text
+            sender=user,
+            signal_type=signal_type,
+            payload=payload
         )
-        serializer = ConsultationMessageSerializer(reply_msg)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({
+            "id": sig.id,
+            "sender": sig.sender.id,
+            "sender_username": sig.sender.username,
+            "type": sig.signal_type,
+            "payload": sig.payload,
+            "created_at": sig.created_at.isoformat()
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='signals')
+    def get_signals(self, request, pk=None):
+        appointment = self.get_object()
+        user = request.user
+
+        is_participant = (user == appointment.patient or user == appointment.doctor or user.role == 'ADMIN' or user.is_staff)
+        if not is_participant:
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+
+        since_id = request.query_params.get('since', 0)
+        try:
+            since_id = int(since_id)
+        except (ValueError, TypeError):
+            since_id = 0
+
+        # Retrieve signals sent by the OTHER peer (exclude current user)
+        signals = ConsultationSignal.objects.filter(
+            appointment=appointment,
+            id__gt=since_id
+        ).exclude(sender=user).order_by('id')[:50]
+
+        return Response([{
+            "id": s.id,
+            "sender": s.sender.id,
+            "sender_username": s.sender.username,
+            "type": s.signal_type,
+            "payload": s.payload,
+            "created_at": s.created_at.isoformat()
+        } for s in signals])
 
 
     @action(detail=False, methods=['get'], url_path='my-patients')

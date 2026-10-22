@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/api";
@@ -20,8 +19,7 @@ import {
   User, 
   FileText, 
   Send, 
-  Sparkles,
-  Info,
+  Volume2,
   X
 } from "lucide-react";
 
@@ -50,6 +48,25 @@ interface MessageItem {
   created_at: string;
 }
 
+interface SignalItem {
+  id: number;
+  sender: number;
+  sender_username: string;
+  type: string;
+  payload: any;
+  created_at: string;
+}
+
+const RTC_CONFIG: RTCConfiguration = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+  ],
+};
+
 export default function ConsultationRoom({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const appointmentId = unwrappedParams.id;
@@ -65,18 +82,25 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const [callDuration, setCallDuration] = useState(0);
   const [activeTab, setActiveTab] = useState<"chat" | "notes" | null>("chat");
 
-  // Messages State
+  // Messages State (Exclusively Doctor & Patient - No Mock Bots)
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
-  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
-  const [partnerAiEnabled, setPartnerAiEnabled] = useState(true);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Video Stream Persistent Refs
+  // Video Streams
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [hasCameraAccess, setHasCameraAccess] = useState<boolean | null>(null);
+
+  // WebRTC Peer Connection State
+  const peerRef = useRef<RTCPeerConnection | null>(null);
+  const queuedCandidates = useRef<RTCIceCandidateInit[]>([]);
+  const lastSignalIdRef = useRef<number>(0);
+  const [remoteStreamActive, setRemoteStreamActive] = useState(false);
+  const [peerState, setPeerState] = useState<string>("initializing");
+  const [audioNeedsUnlock, setAudioNeedsUnlock] = useState(false);
 
   // Timer Effect
   useEffect(() => {
@@ -91,6 +115,19 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     const secs = seconds % 60;
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
+
+  // Helper to transmit WebRTC signaling data through backend
+  const sendSignal = useCallback(async (type: string, payload: any = {}) => {
+    try {
+      await authFetch(`/api/appointments/appointments/${appointmentId}/signal/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, payload })
+      });
+    } catch (err) {
+      console.warn("Signal send failed:", err);
+    }
+  }, [appointmentId]);
 
   // Fetch Appointment Details
   const fetchAppointmentDetails = useCallback(async () => {
@@ -109,7 +146,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [appointmentId]);
 
-  // Fetch Messages
+  // Fetch Authentic Messages (Polls every 2s for live chat)
   const fetchMessages = useCallback(async () => {
     try {
       const res = await authFetch(`/api/appointments/appointments/${appointmentId}/messages/`);
@@ -122,26 +159,168 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [appointmentId]);
 
-  useEffect(() => {
-    const role = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
-    setUserRole(role);
-    fetchAppointmentDetails();
-    fetchMessages();
+  // Initialize WebRTC Peer Connection
+  const initPeerConnection = useCallback((localStream: MediaStream) => {
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
 
-    // Poll messages every 4 seconds during active consultation
-    const msgInterval = setInterval(fetchMessages, 4000);
-    return () => clearInterval(msgInterval);
-  }, [fetchAppointmentDetails, fetchMessages]);
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    peerRef.current = pc;
 
-  // Handle Camera Stream Initialization
+    // Attach local audio/video tracks to the peer connection
+    localStream.getTracks().forEach((track) => {
+      pc.addTrack(track, localStream);
+    });
+
+    // Handle incoming remote media tracks from other device
+    pc.ontrack = (event) => {
+      if (event.streams && event.streams[0]) {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+          remoteVideoRef.current.play().catch(() => {
+            // Mobile browser user-gesture policy might pause unmuted audio
+            setAudioNeedsUnlock(true);
+          });
+        }
+        setRemoteStreamActive(true);
+      }
+    };
+
+    // Broadcast local ICE candidates to peer through signaling channel
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendSignal("ice-candidate", event.candidate.toJSON());
+      }
+    };
+
+    // Track connection state
+    pc.onconnectionstatechange = () => {
+      setPeerState(pc.connectionState);
+      if (pc.connectionState === "connected") {
+        setRemoteStreamActive(true);
+      } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
+        setRemoteStreamActive(false);
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        setRemoteStreamActive(true);
+      }
+    };
+
+    return pc;
+  }, [sendSignal]);
+
+  // Initiate an offer (typically triggered by DOCTOR or on peer join)
+  const createAndSendOffer = useCallback(async () => {
+    const pc = peerRef.current;
+    if (!pc) return;
+
+    try {
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
+      await pc.setLocalDescription(offer);
+      await sendSignal("offer", offer);
+    } catch (err) {
+      console.warn("Failed creating offer:", err);
+    }
+  }, [sendSignal]);
+
+  // Handle incoming signaling messages from the other device
+  const handleSignal = useCallback(async (sig: SignalItem) => {
+    const pc = peerRef.current;
+    if (!pc) return;
+
+    try {
+      if (sig.type === "join") {
+        // Peer has arrived or reconnected. If we are doctor, initiate offer
+        const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
+        if (currentRole === "DOCTOR") {
+          await createAndSendOffer();
+        }
+      } else if (sig.type === "offer") {
+        // Remote sent an offer
+        await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+        
+        // Flush any candidates that arrived before offer
+        while (queuedCandidates.current.length > 0) {
+          const candidate = queuedCandidates.current.shift();
+          if (candidate) {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+          }
+        }
+
+        // Generate and transmit answer back
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await sendSignal("answer", answer);
+      } else if (sig.type === "answer") {
+        // Remote answered our offer
+        if (pc.signalingState === "have-local-offer") {
+          await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+          
+          while (queuedCandidates.current.length > 0) {
+            const candidate = queuedCandidates.current.shift();
+            if (candidate) {
+              await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+            }
+          }
+        }
+      } else if (sig.type === "ice-candidate") {
+        if (sig.payload) {
+          if (pc.remoteDescription && pc.remoteDescription.type) {
+            await pc.addIceCandidate(new RTCIceCandidate(sig.payload)).catch(() => {});
+          } else {
+            queuedCandidates.current.push(sig.payload);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Error handling incoming signal:", err);
+    }
+  }, [createAndSendOffer, sendSignal]);
+
+  // Poll for new signals from the other participant
+  const pollSignals = useCallback(async () => {
+    try {
+      const res = await authFetch(`/api/appointments/appointments/${appointmentId}/signals/?since=${lastSignalIdRef.current}`);
+      if (res.ok) {
+        const signals: SignalItem[] = await res.json();
+        for (const sig of signals) {
+          if (sig.id > lastSignalIdRef.current) {
+            lastSignalIdRef.current = sig.id;
+            await handleSignal(sig);
+          }
+        }
+      }
+    } catch {
+      // silent polling catch
+    }
+  }, [appointmentId, handleSignal]);
+
+  // Unlock audio on mobile devices if browser autoplay policy paused remote audio
+  const handleUnlockAudio = () => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.play().then(() => {
+        setAudioNeedsUnlock(false);
+      }).catch(() => {});
+    }
+  };
+
+  // Main Camera & Peer Lifecycle
   useEffect(() => {
     let isMounted = true;
 
-    async function startCamera() {
+    async function startMedia() {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: { ideal: 1280 }, height: { ideal: 720 } }, 
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, 
             audio: true 
           });
 
@@ -156,6 +335,20 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             localVideoRef.current.play().catch(() => {});
           }
           setHasCameraAccess(true);
+
+          // Setup Peer Connection with this stream
+          initPeerConnection(stream);
+
+          // Announce presence to other participant
+          await sendSignal("join", { timestamp: Date.now() });
+
+          // If doctor, also generate initial offer after short delay for peer to be ready
+          const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
+          if (currentRole === "DOCTOR") {
+            setTimeout(() => {
+              createAndSendOffer();
+            }, 1200);
+          }
         } else {
           setHasCameraAccess(false);
         }
@@ -165,18 +358,41 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
       }
     }
 
-    startCamera();
+    startMedia();
 
     return () => {
       isMounted = false;
+      if (peerRef.current) {
+        peerRef.current.close();
+        peerRef.current = null;
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
     };
-  }, []);
+  }, [initPeerConnection, sendSignal, createAndSendOffer]);
 
-  // Ensure stream stays bound and playing when camera is enabled
+  // Polling Loops (Messages & WebRTC Signaling)
+  useEffect(() => {
+    const role = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
+    setUserRole(role);
+    fetchAppointmentDetails();
+    fetchMessages();
+
+    // Fast polling for signals (every 1.5s) to guarantee snappy connection
+    const signalInterval = setInterval(pollSignals, 1500);
+
+    // Fast polling for authentic messages (every 2s)
+    const msgInterval = setInterval(fetchMessages, 2000);
+
+    return () => {
+      clearInterval(signalInterval);
+      clearInterval(msgInterval);
+    };
+  }, [fetchAppointmentDetails, fetchMessages, pollSignals]);
+
+  // Keep local video playing when re-enabled
   useEffect(() => {
     if (!videoDisabled && streamRef.current && localVideoRef.current) {
       if (localVideoRef.current.srcObject !== streamRef.current) {
@@ -186,7 +402,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [videoDisabled]);
 
-  // Robust Camera Toggle without destroying the MediaStream or video element
+  // Robust Camera Toggle
   const toggleCamera = async () => {
     const nextDisabled = !videoDisabled;
     setVideoDisabled(nextDisabled);
@@ -194,38 +410,19 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     try {
       if (streamRef.current) {
         const videoTracks = streamRef.current.getVideoTracks();
-        if (videoTracks.length > 0) {
-          videoTracks.forEach(track => {
-            track.enabled = !nextDisabled;
-          });
-        }
+        videoTracks.forEach(track => {
+          track.enabled = !nextDisabled;
+        });
 
-        // Re-attach and play video on re-enable
         if (!nextDisabled && localVideoRef.current) {
           if (localVideoRef.current.srcObject !== streamRef.current) {
             localVideoRef.current.srcObject = streamRef.current;
           }
           await localVideoRef.current.play().catch(() => {});
         }
-      } else if (!nextDisabled) {
-        // Stream was absent or lost: re-request hardware access
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: !audioMuted
-          });
-          streamRef.current = stream;
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream;
-            await localVideoRef.current.play().catch(() => {});
-          }
-          setHasCameraAccess(true);
-        }
       }
-
       toast.info(nextDisabled ? "Camera paused" : "Camera turned on");
-    } catch (err) {
-      console.warn("Camera toggle notice:", err);
+    } catch {
       toast.info(nextDisabled ? "Camera paused" : "Camera turned on");
     }
   };
@@ -245,7 +442,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     toast.info(nextMuted ? "Microphone muted" : "Microphone unmuted");
   };
 
-  // Send Consultation Message + Interactive Clinical Response
+  // Send Direct Doctor <-> Patient Message (No AI bot / No simulated replies)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -265,28 +462,6 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         setMessages(prev => [...prev, sent]);
         setNewMessage("");
         chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-
-        // If interactive clinical responder is enabled, simulate typing and doctor response
-        if (partnerAiEnabled) {
-          setIsPartnerTyping(true);
-          setTimeout(async () => {
-            try {
-              const replyRes = await authFetch(`/api/appointments/appointments/${appointmentId}/simulate-reply/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" }
-              });
-              if (replyRes.ok) {
-                const replyMsg = await replyRes.json();
-                setMessages(prev => [...prev, replyMsg]);
-                chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-              }
-            } catch {
-              // silent catch for simulated responder
-            } finally {
-              setIsPartnerTyping(false);
-            }
-          }, 1500);
-        }
       } else {
         toast.error("Failed to transmit clinical message.");
       }
@@ -323,7 +498,6 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   };
 
-
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between relative overflow-hidden font-sans">
@@ -340,8 +514,8 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                   HealthTech Teleconsultation Room
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Live WebRTC
+                  <span className={`w-1.5 h-1.5 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+                  {remoteStreamActive ? "P2P WebRTC Connected" : "Connecting Peer..."}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
@@ -351,6 +525,16 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="flex items-center gap-3">
+            {audioNeedsUnlock && (
+              <button
+                onClick={handleUnlockAudio}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg animate-pulse"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>Tap to Enable Audio</span>
+              </button>
+            )}
+
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono font-medium text-slate-300">
               <Clock className="w-3.5 h-3.5 text-emerald-400" />
               <span>{formatTimer(callDuration)}</span>
@@ -374,13 +558,13 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         {/* MAIN VIDEO FEEDS AREA */}
         <main className="flex-1 p-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-stretch justify-center relative overflow-hidden">
           
-          {/* Main Remote Feed (e.g. Doctor viewing Patient, or Patient viewing Doctor) */}
+          {/* Main Remote Feed: Doctor viewing Patient, or Patient viewing Doctor */}
           <div className="flex-1 bg-slate-900 rounded-3xl border border-slate-800 relative overflow-hidden flex flex-col justify-between p-4 shadow-2xl min-h-[360px]">
             
             {/* Remote Participant Label */}
             <div className="flex items-center justify-between z-10">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/70 backdrop-blur-md border border-slate-800 text-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className={`w-2 h-2 rounded-full ${remoteStreamActive ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`} />
                 <span className="font-bold text-white">
                   {userRole === "DOCTOR" 
                     ? (appointment?.patient_name || "Patient") 
@@ -392,27 +576,49 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
               </div>
             </div>
 
-            {/* Video Canvas Simulation */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-emerald-600/20 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 text-3xl font-bold shadow-2xl shadow-emerald-500/10 mb-4 animate-pulse">
-                {userRole === "DOCTOR" 
-                  ? (appointment?.patient_name?.charAt(0) || "P")
-                  : (appointment?.doctor_name?.charAt(0) || "D")}
-              </div>
-              <p className="text-sm font-semibold text-slate-200">
-                {userRole === "DOCTOR" ? appointment?.patient_name : appointment?.doctor_name}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">High-Definition Telehealth Stream Active</p>
-            </div>
+            {/* REAL REMOTE VIDEO STREAM ELEMENT */}
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+                remoteStreamActive ? "opacity-100 z-0" : "opacity-0 pointer-events-none -z-10"
+              }`}
+            />
 
-            {/* Bottom Audio Indicator */}
+            {/* Connecting / Standby Placeholder shown while waiting for peer stream */}
+            {!remoteStreamActive && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 p-6 text-center">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-emerald-600/20 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 text-3xl font-bold shadow-2xl shadow-emerald-500/10 mb-4 animate-pulse">
+                  {userRole === "DOCTOR" 
+                    ? (appointment?.patient_name?.charAt(0) || "P")
+                    : (appointment?.doctor_name?.charAt(0) || "D")}
+                </div>
+                <p className="text-sm font-semibold text-slate-200">
+                  {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Doctor")}
+                </p>
+                <p className="text-xs text-emerald-400 mt-1 font-medium flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  Connecting peer-to-peer clinical stream...
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1 max-w-sm">
+                  {userRole === "DOCTOR" 
+                    ? "Ensure the patient has logged into this consultation room from their device." 
+                    : "Connecting with physician. Please keep camera and microphone enabled."}
+                </p>
+              </div>
+            )}
+
+            {/* Bottom Audio / Connection Status Indicator */}
             <div className="z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/70 backdrop-blur-md border border-slate-800 self-start text-[11px] text-slate-300">
               <div className="flex items-center gap-0.5">
-                <span className="w-1 h-2.5 bg-emerald-400 rounded-full animate-bounce" />
-                <span className="w-1 h-4 bg-emerald-400 rounded-full animate-bounce delay-75" />
-                <span className="w-1 h-3 bg-emerald-400 rounded-full animate-bounce delay-150" />
+                <span className={`w-1 h-2.5 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce" : "bg-slate-600"}`} />
+                <span className={`w-1 h-4 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce delay-75" : "bg-slate-600"}`} />
+                <span className={`w-1 h-3 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce delay-150" : "bg-slate-600"}`} />
               </div>
-              <span className="ml-1 text-[10px] font-medium">Audio Active</span>
+              <span className="ml-1 text-[10px] font-medium">
+                {remoteStreamActive ? "Live WebRTC Audio & Video" : "Waiting for Peer Video"}
+              </span>
             </div>
           </div>
 
@@ -430,7 +636,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
               )}
             </div>
 
-            {/* Video Stream Element: Always persistent in DOM to prevent losing stream reference */}
+            {/* Local Video Stream Element: Muted to prevent echo */}
             <video 
               ref={localVideoRef} 
               autoPlay 
@@ -458,15 +664,15 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
             <div className="z-10 flex items-center justify-between w-full">
               <span className="text-[10px] text-slate-400 font-mono">
-                {videoDisabled ? "Video Muted" : "Live Stream"}
+                {videoDisabled ? "Video Muted" : "Local Feed"}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                1080p • 30fps
+              <span className="text-[10px] text-emerald-400 font-mono font-medium">
+                {peerState === "connected" ? "P2P Synced" : peerState}
               </span>
             </div>
           </div>
 
-          {/* Right Side Drawer: In-Call Chat & Notes (Overlay on Mobile, Sidebar on Desktop) */}
+          {/* Right Side Drawer: Direct Doctor <-> Patient In-Call Chat & Notes */}
           <AnimatePresence>
             {activeTab && (
               <motion.div 
@@ -481,7 +687,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                       {activeTab === "chat" ? (
                         <>
                           <MessageSquare className="w-4 h-4 text-emerald-400" />
-                          <span>Consultation Clinical Chat</span>
+                          <span>Direct Consultation Chat</span>
                         </>
                       ) : (
                         <>
@@ -492,27 +698,12 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                     </h3>
                     {activeTab === "chat" && (
                       <p className="text-[10px] text-slate-400 mt-0.5">
-                        In session with {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Physician")}
+                        Private live messaging with {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Physician")}
                       </p>
                     )}
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    {activeTab === "chat" && (
-                      <button
-                        type="button"
-                        onClick={() => setPartnerAiEnabled(!partnerAiEnabled)}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors flex items-center gap-1 ${
-                          partnerAiEnabled 
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                            : "bg-slate-800 text-slate-400 border-slate-700"
-                        }`}
-                        title="Toggle automated clinical responses for solo testing"
-                      >
-                        <Sparkles className="w-3 h-3 text-emerald-400" />
-                        <span>{partnerAiEnabled ? "AI Responder Active" : "AI Responder Muted"}</span>
-                      </button>
-                    )}
                     <button 
                       onClick={() => setActiveTab(null)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
@@ -524,19 +715,11 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
                 {activeTab === "chat" ? (
                   <>
-                    {/* Live Multi-Party Notice Banner */}
-                    <div className="mt-2.5 p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-[10px] text-slate-400 flex items-start gap-1.5 leading-tight">
-                      <Info className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <span>
-                        <strong>Two-way live chat:</strong> Messages sync instantly. For dual testing across accounts, open an Incognito window and log in as <code>doctor</code> (<code>doctorpass123</code>).
-                      </span>
-                    </div>
-
                     <div className="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 max-h-[340px] lg:max-h-[300px]">
                       {messages.length === 0 ? (
                         <div className="text-center text-slate-500 text-xs py-8 space-y-2">
-                          <p>No messages yet in this session.</p>
-                          <p className="text-[11px] text-slate-600">Send a greeting, symptoms, or question to receive clinical feedback.</p>
+                          <p>No messages yet in this consultation.</p>
+                          <p className="text-[11px] text-slate-600">Messages sent here are private and direct between Doctor and Patient.</p>
                         </div>
                       ) : (
                         messages.map((m) => (
@@ -560,28 +743,13 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                         ))
                       )}
 
-                      {/* Animated Typing Indicator */}
-                      {isPartnerTyping && (
-                        <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-slate-800/90 text-slate-300 text-xs w-fit mr-auto border border-slate-700/60 shadow-md">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                          <span className="font-medium text-[11px] text-emerald-300">
-                            {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Dr. Sarah Connor")} is typing clinical response...
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" />
-                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-                          </div>
-                        </div>
-                      )}
-
                       <div ref={chatBottomRef} />
                     </div>
 
                     <form onSubmit={handleSendMessage} className="pt-2 flex items-center gap-2 border-t border-slate-800">
                       <input
                         type="text"
-                        placeholder="Type symptoms or clinical question..."
+                        placeholder="Type direct message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         className="flex-1 px-3 py-2.5 text-base sm:text-xs rounded-xl bg-slate-950 border border-slate-800 focus:outline-hidden focus:border-emerald-500 text-white placeholder-slate-500"
@@ -681,7 +849,6 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             <span className="hidden sm:inline">End Consultation</span>
           </button>
         </footer>
-
 
       </div>
     </ProtectedRoute>

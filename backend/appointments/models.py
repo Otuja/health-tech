@@ -44,3 +44,18 @@ class ConsultationMessage(models.Model):
 
     def __str__(self):
         return f"Msg from {self.sender.username} on Appt {self.appointment.id}"
+
+
+class ConsultationSignal(models.Model):
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='signals')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    signal_type = models.CharField(max_length=50)  # 'offer', 'answer', 'ice-candidate', 'ready', 'leave'
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Signal {self.signal_type} from {self.sender.username} on Appt {self.appointment.id}"
+
