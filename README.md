@@ -2,6 +2,11 @@
 
 A modern, enterprise-grade, full-stack telemedicine and clinical triage platform built with **Next.js (App Router)**, **Django REST Framework**, and **Google Gemini AI**.
 
+### 🌐 Live Cloud Deployment
+- **Frontend App (PWA):** [https://health-tech-psi.vercel.app](https://health-tech-psi.vercel.app)
+- **Backend API (REST):** [https://healthtech-backend-9xpb.onrender.com](https://healthtech-backend-9xpb.onrender.com)
+- **Database:** Managed PostgreSQL 16 on Render
+
 ---
 
 ## 🌟 Key Features

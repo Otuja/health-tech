@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { HeartPulse, Stethoscope, User, KeyRound, ShieldCheck, Lock } from "lucide-react";
+import { HeartPulse, Lock } from "lucide-react";
 import { API_BASE } from "@/lib/api";
 
 export default function Login() {
@@ -69,11 +69,6 @@ export default function Login() {
     }
   };
 
-  const fillCredentials = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden py-12 px-4 selection:bg-emerald-500 selection:text-white">
       {/* Background radial glow */}
@@ -95,38 +90,6 @@ export default function Login() {
           <p className="text-slate-600 text-xs mt-1">
             Access your verified Electronic Health Records & Clinical Consultations.
           </p>
-        </div>
-
-        {/* 1-Click Quick Demo Credentials Helper */}
-        <div className="mb-6 p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 text-xs text-slate-700">
-          <div className="flex items-center gap-1.5 font-bold text-emerald-900 mb-2">
-            <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Instant 1-Click Test Credentials:</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => fillCredentials("doctor", "doctorpass123")}
-              className="p-2.5 rounded-xl bg-white border border-emerald-200 text-left hover:border-emerald-500 transition-colors flex items-center gap-2 shadow-xs group"
-            >
-              <Stethoscope className="w-4 h-4 text-emerald-600 flex-shrink-0 group-hover:scale-110 transition-transform" />
-              <div>
-                <span className="font-bold block text-slate-800 text-xs">Dr. Sarah</span>
-                <span className="text-[10px] text-slate-500">doctorpass123</span>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillCredentials("patient", "patientpass123")}
-              className="p-2.5 rounded-xl bg-white border border-emerald-200 text-left hover:border-emerald-500 transition-colors flex items-center gap-2 shadow-xs group"
-            >
-              <User className="w-4 h-4 text-emerald-600 flex-shrink-0 group-hover:scale-110 transition-transform" />
-              <div>
-                <span className="font-bold block text-slate-800 text-xs">Alex Murphy</span>
-                <span className="text-[10px] text-slate-500">patientpass123</span>
-              </div>
-            </button>
-          </div>
         </div>
 
         {error && (
