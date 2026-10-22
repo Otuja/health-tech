@@ -1,0 +1,62 @@
+{
+  "id": "/",
+  "name": "HealthTech AI Telemedicine",
+  "short_name": "HealthTech",
+  "description": "AI-Powered Telemedicine, Clinical Symptom Triage, and Offline Paramedic Emergency Pass",
+  "start_url": "/patient/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#022c22",
+  "theme_color": "#059669",
+  "categories": ["medical", "health", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Symptom Triage",
+      "short_name": "AI Triage",
+      "description": "Check symptoms and get clinical routing",
+      "url": "/patient/triage",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Emergency Vitals Pass",
+      "short_name": "Emergency Pass",
+      "description": "Paramedic scannable QR card",
+      "url": "/patient/emergency",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Book Appointment",
+      "short_name": "Appointments",
+      "description": "Schedule a doctor consultation",
+      "url": "/patient/appointments",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,6 +1,21 @@
 import { toast } from "sonner";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const getApiBase = (): string => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
+      return `http://${hostname}:8000`;
+    }
+  }
+  return "http://localhost:8000";
+};
+
+export const API_BASE = typeof window !== "undefined"
+  ? (process.env.NEXT_PUBLIC_API_URL || (window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" ? `http://${window.location.hostname}:8000` : "http://localhost:8000"))
+  : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000");
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];

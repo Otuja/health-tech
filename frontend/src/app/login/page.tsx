@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { HeartPulse, Stethoscope, User, KeyRound, ShieldCheck, Lock } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 
 export default function Login() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function Login() {
     setError("");
     setSubmitting(true);
     try {
-      const res = await fetch("http://localhost:8000/api/token/", {
+      const res = await fetch(`${API_BASE}/api/token/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -30,7 +31,7 @@ export default function Login() {
         localStorage.setItem("refresh_token", data.refresh);
 
         // Fetch user profile to determine role
-        const profileRes = await fetch("http://localhost:8000/api/users/me/", {
+        const profileRes = await fetch(`${API_BASE}/api/users/me/`, {
           headers: { "Authorization": `Bearer ${data.access}` }
         });
         
@@ -60,7 +61,7 @@ export default function Login() {
         toast.error(msg);
       }
     } catch {
-      const msg = "Network error connecting to Django backend at http://localhost:8000.";
+      const msg = `Network error connecting to backend at ${API_BASE}.`;
       setError(msg);
       toast.error(msg);
     } finally {

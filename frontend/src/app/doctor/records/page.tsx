@@ -19,7 +19,7 @@ import {
   Activity,
   Layers
 } from "lucide-react";
-import { authFetch } from "@/lib/api";
+import { authFetch, API_BASE } from "@/lib/api";
 
 interface AssignedPatient {
   id: number;
@@ -512,7 +512,7 @@ export default function DoctorRecords() {
                     <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
                       {doc.file ? (
                         <a
-                          href={`http://localhost:8000${doc.file}`}
+                          href={doc.file.startsWith("http") ? doc.file : `${API_BASE}${doc.file}`}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-colors border border-emerald-200"

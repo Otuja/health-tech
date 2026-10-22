@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { HeartPulse, UserPlus, Stethoscope, User } from "lucide-react";
+import { API_BASE } from "@/lib/api";
 
 export default function Register() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function Register() {
         payload.specialization = specialization;
       }
       
-      const res = await fetch("http://localhost:8000/api/users/register/", {
+      const res = await fetch(`${API_BASE}/api/users/register/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -51,7 +52,7 @@ export default function Register() {
         toast.error("Registration failed: " + msg);
       }
     } catch {
-      const msg = "Network error connecting to Django server at http://localhost:8000.";
+      const msg = `Network error connecting to backend at ${API_BASE}.`;
       setError(msg);
       toast.error(msg);
     } finally {

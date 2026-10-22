@@ -1,70 +1,86 @@
-# HealthTech Backend (Django)
+# HealthTech Backend (Django REST Framework)
 
-This is the backend API for the HealthTech application. It is built using Django and Django REST Framework, providing secure API endpoints for authentication, appointment booking, medical records, and AI symptom checking.
+This is the backend API for the HealthTech application. Built with Django and Django REST Framework, it powers authentication, real-time concurrency-locked appointment scheduling, NDPR-compliant electronic medical records (EHR), and AI-driven clinical symptom triage with Google Gemini.
 
-## Prerequisites
+---
+
+## 📋 Prerequisites
 
 - Python 3.10+
-- [Ollama](https://ollama.com/) (Required for the AI Symptom Checker)
+- Google Gemini API Key (optional for development; offline clinical fallback engine is included)
 
-## Installation & Setup
+---
 
-Follow these steps to get the backend server running locally on Windows:
+## 🛠️ Installation & Setup
 
 ### 1. Activate the Virtual Environment
-Navigate to the root directory of your project (where `venv` is located) and activate the virtual environment:
 ```powershell
-# From the root health-tech directory
+# From the root directory:
 .\venv\Scripts\Activate.ps1
 ```
 
 ### 2. Install Requirements
-Navigate into the `backend` directory and install the necessary Python packages using the generated `requirements.txt`:
 ```powershell
 cd backend
 pip install -r requirements.txt
 ```
-*Key dependencies include `Django`, `djangorestframework`, `djangorestframework-simplejwt`, `django-cors-headers`, and `requests`.*
+Key dependencies:
+- `Django==6.1.1`
+- `djangorestframework==3.18.1`
+- `djangorestframework_simplejwt==5.5.1`
+- `django-cors-headers==4.9.0`
+- `python-decouple==3.8`
+- `requests==2.34.2`
 
-### 3. Run Database Migrations
-We are using SQLite for local development. Apply the database migrations to create the required tables:
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```powershell
+cp .env.example .env
+```
+Populate `.env` with your settings:
+```ini
+SECRET_KEY=your_django_secret_key_here
+DEBUG=True
+ALLOWED_HOSTS=*
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### 4. Run Migrations & Seed Clinical Data
 ```powershell
 python manage.py makemigrations
 python manage.py migrate
+python create_test_users.py
 ```
 
-### 4. Create an Admin User (Superuser)
-You will need a superuser account to access the Django Admin panel and manage users, appointments, and records manually.
-```powershell
-python manage.py createsuperuser
-```
-Follow the prompts to set your username, email, and password.
-
-### 5. Start the Development Server
-Run the local Django development server:
+### 5. Start the Server
 ```powershell
 python manage.py runserver
 ```
-The backend API will now be running at **http://localhost:8000/**.
+The backend API is now live at **http://127.0.0.1:8000/**.
 
 ---
 
-## AI Symptom Checker Setup (Ollama)
-The `/api/triage/analyze/` endpoint connects to a local instance of Ollama to generate medical triage responses.
-1. Download and install Ollama from [ollama.com](https://ollama.com/).
-2. Open a separate terminal window and run:
-   ```bash
-   ollama run llama3
-   ```
-   *(Note: If Ollama is not running, the API will safely fall back to a default "offline" message without crashing).*
+## 🧠 AI Clinical Triage Setup (Google Gemini)
+
+The `/api/triage/analyze/` endpoint provides clinical symptom evaluation:
+- **Cloud Engine:** Uses Google Gemini (`gemini-flash-lite-latest` or `gemini-3.5-flash`).
+- **Resilient Fallback:** If the API key is not supplied or network connectivity drops, the built-in clinical heuristics engine safely evaluates emergencies without crashing.
+- **Red-Flag Emergency Detection:** Typo-tolerant regex checks for hemoptysis, severe bleeding, trauma, stroke, and cardiovascular distress.
+- **Dynamic Specialist Routing:** Automatically routes to Pulmonology, Cardiology, or Emergency Medicine & Trauma with single-tap booking availability.
 
 ---
 
-## Key Endpoints
+## 🔌 Core API Endpoints
 
-- **Auth**: `/api/token/` (POST) - Retrieve JWT access & refresh tokens.
-- **Auth**: `/api/users/register/` (POST) - Register a new User (Patient/Doctor).
-- **Appointments**: `/api/appointments/slots/` (GET) - Fetch available time slots.
-- **Appointments**: `/api/appointments/slots/<id>/book/` (POST) - Book a slot securely.
-- **Records**: `/api/records/` (GET) - Fetch NDPR-compliant medical records.
-- **AI Triage**: `/api/triage/analyze/` (POST) - AI Symptom evaluation.
+| Area | Method | Endpoint | Description |
+| :--- | :--- | :--- | :--- |
+| **Auth** | POST | `/api/token/` | Obtain JWT access and refresh tokens |
+| **Auth** | POST | `/api/token/refresh/` | Refresh expired JWT access token |
+| **Auth** | POST | `/api/users/register/` | Register new patient account |
+| **Profile** | GET | `/api/users/me/` | Authenticated user profile |
+| **Admin** | GET | `/api/users/admin/stats/` | System-wide operational dashboard metrics |
+| **Admin** | GET/POST | `/api/users/admin/doctors/` | Doctor management and staff onboarding |
+| **Appointments** | GET | `/api/appointments/slots/` | View available appointment slots |
+| **Appointments** | POST | `/api/appointments/slots/<id>/book/` | Concurrency-protected slot reservation |
+| **Records** | GET/POST | `/api/records/` | NDPR-compliant patient clinical records |
+| **AI Triage** | POST | `/api/triage/analyze/` | Symptom assessment and doctor routing |

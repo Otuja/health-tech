@@ -111,17 +111,17 @@ export default function PatientDashboard() {
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap gap-2.5">
+        <div className="relative z-10 flex flex-wrap gap-2 sm:gap-2.5">
           <Link
             href="/patient/appointments"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl font-bold transition-all shadow-md text-xs"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl sm:rounded-2xl font-bold transition-all shadow-md text-xs active:scale-95"
           >
             <Calendar className="w-4 h-4" />
             <span>Book Visit</span>
           </Link>
           <Link
             href="/patient/records"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-2xl font-bold transition-all text-xs"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl sm:rounded-2xl font-bold transition-all text-xs active:scale-95"
           >
             <FolderPlus className="w-4 h-4" />
             <span>Upload EHR</span>
@@ -129,59 +129,101 @@ export default function PatientDashboard() {
         </div>
       </header>
 
-      {/* Top Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* MOBILE QUICK ACTION CAROUSEL (Mobile App Launcher) */}
+      <div className="md:hidden flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1 -my-3">
+        <Link
+          href="/patient/triage"
+          className="flex-1 min-w-[130px] p-3 rounded-2xl bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white shadow-md shadow-emerald-700/20 flex flex-col justify-between active:scale-95 transition-transform"
+        >
+          <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2">
+            <Bot className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-emerald-200 uppercase font-bold tracking-wider block">AI Triage</span>
+            <span className="text-xs font-bold block leading-tight">Check Symptoms</span>
+          </div>
+        </Link>
+
+        <Link
+          href="/patient/emergency"
+          className="flex-1 min-w-[130px] p-3 rounded-2xl bg-gradient-to-tr from-red-600 to-red-500 text-white shadow-md shadow-red-600/20 flex flex-col justify-between active:scale-95 transition-transform"
+        >
+          <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2">
+            <QrCode className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-red-200 uppercase font-bold tracking-wider block">Offline SOS</span>
+            <span className="text-xs font-bold block leading-tight">Emergency Pass</span>
+          </div>
+        </Link>
+
+        <Link
+          href="/patient/appointments"
+          className="flex-1 min-w-[130px] p-3 rounded-2xl bg-slate-900 text-white shadow-md flex flex-col justify-between active:scale-95 transition-transform"
+        >
+          <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center mb-2">
+            <Calendar className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Doctors</span>
+            <span className="text-xs font-bold block leading-tight">Book Visit</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Top Metric Cards (Mobile 2x2 App Grid) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         
         {/* Metric 1 */}
-        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
           <div>
-            <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Booked Visits</h3>
-            <p className="text-3xl font-extrabold text-slate-900 mt-1">{loading ? "..." : appointments.length}</p>
-            <span className="text-[11px] text-emerald-700 font-semibold mt-1 inline-block">Scheduled sessions</span>
+            <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Booked Visits</h3>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 sm:mt-1">{loading ? "..." : appointments.length}</p>
+            <span className="text-[10px] sm:text-[11px] text-emerald-700 font-semibold mt-0.5 inline-block">Scheduled</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-            <Calendar className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+            <Calendar className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </div>
 
         {/* Metric 2 */}
-        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
           <div>
-            <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Doctor Encounters</h3>
-            <p className="text-3xl font-extrabold text-slate-900 mt-1">{loading ? "..." : records.length}</p>
-            <span className="text-[11px] text-emerald-700 font-semibold mt-1 inline-block">Clinical records</span>
+            <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Consultations</h3>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 sm:mt-1">{loading ? "..." : records.length}</p>
+            <span className="text-[10px] sm:text-[11px] text-emerald-700 font-semibold mt-0.5 inline-block">EHR records</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-            <Stethoscope className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+            <Stethoscope className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </div>
 
         {/* Metric 3 */}
-        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
           <div>
-            <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Uploaded EHR Files</h3>
-            <p className="text-3xl font-extrabold text-slate-900 mt-1">{loading ? "..." : documents.length}</p>
-            <span className="text-[11px] text-blue-700 font-semibold mt-1 inline-block">Lab & X-Ray files</span>
+            <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Uploaded EHR</h3>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 sm:mt-1">{loading ? "..." : documents.length}</p>
+            <span className="text-[10px] sm:text-[11px] text-blue-700 font-semibold mt-0.5 inline-block">Lab & scans</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center">
-            <FileText className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0">
+            <FileText className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </div>
 
         {/* Metric 4 */}
-        <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/80 flex items-center justify-between">
           <div>
-            <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Emergency Pass</h3>
-            <p className="text-base font-bold text-red-600 mt-1 flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-              Active QR Vitals
+            <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Emergency Pass</h3>
+            <p className="text-xs sm:text-base font-bold text-red-600 mt-0.5 sm:mt-1 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              Active QR
             </p>
-            <Link href="/patient/emergency" className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold underline mt-1 inline-block">
-              Scan & Edit Pass
+            <Link href="/patient/emergency" className="text-[10px] sm:text-[11px] text-emerald-700 hover:text-emerald-800 font-bold underline mt-0.5 inline-block">
+              View SOS Pass
             </Link>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
-            <QrCode className="w-6 h-6" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+            <QrCode className="w-4 h-4 sm:w-6 sm:h-6" />
           </div>
         </div>
 

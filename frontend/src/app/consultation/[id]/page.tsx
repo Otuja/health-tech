@@ -466,14 +466,14 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             </div>
           </div>
 
-          {/* Right Side Drawer: In-Call Chat & Notes */}
+          {/* Right Side Drawer: In-Call Chat & Notes (Overlay on Mobile, Sidebar on Desktop) */}
           <AnimatePresence>
             {activeTab && (
               <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="w-full lg:w-96 bg-slate-900 border border-slate-800 rounded-3xl p-4 flex flex-col justify-between shadow-2xl z-20 max-h-[520px] lg:max-h-full"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="w-full lg:w-96 bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-4 flex flex-col justify-between shadow-2xl z-30 max-lg:fixed max-lg:inset-x-3 max-lg:bottom-24 max-lg:top-16 max-lg:max-h-[calc(100dvh-10rem)] lg:max-h-full"
               >
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                   <div>
@@ -515,9 +515,9 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                     )}
                     <button 
                       onClick={() => setActiveTab(null)}
-                      className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -532,7 +532,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                       </span>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 max-h-[300px]">
+                    <div className="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 max-h-[340px] lg:max-h-[300px]">
                       {messages.length === 0 ? (
                         <div className="text-center text-slate-500 text-xs py-8 space-y-2">
                           <p>No messages yet in this session.</p>
@@ -584,12 +584,12 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                         placeholder="Type symptoms or clinical question..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 focus:outline-hidden focus:border-emerald-500 text-white placeholder-slate-500"
+                        className="flex-1 px-3 py-2.5 text-base sm:text-xs rounded-xl bg-slate-950 border border-slate-800 focus:outline-hidden focus:border-emerald-500 text-white placeholder-slate-500"
                       />
                       <button
                         type="submit"
                         disabled={sendingMsg || !newMessage.trim()}
-                        className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 transition-colors"
+                        className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 transition-colors"
                       >
                         <Send className="w-4 h-4" />
                       </button>
@@ -621,7 +621,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         </main>
 
         {/* BOTTOM FLOATING CONTROLS BAR */}
-        <footer className="p-4 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center justify-center gap-3 z-20">
+        <footer className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center justify-center gap-3 z-20">
           <button
             onClick={toggleAudio}
             className={`p-3.5 rounded-2xl transition-all shadow-md ${

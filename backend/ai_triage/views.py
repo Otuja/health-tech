@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from django.conf import settings
 from rest_framework.views import APIView
@@ -14,7 +15,6 @@ def detect_clinical_red_flags(symptoms: str, ai_analysis: str = "") -> tuple[boo
     Includes typo tolerance for common misspellings (e.g., 'serve bleading', 'cant breath').
     Returns (is_emergency: bool, detected_reason: str).
     """
-    import re
     combined = (symptoms + " " + ai_analysis).lower()
 
     # 1. Severe Bleeding / Hemorrhage (with typo tolerance: serve, sever, sevear, blead, bleading, bleed, blood)

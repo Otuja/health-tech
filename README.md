@@ -1,62 +1,107 @@
-# HealthTech Application
+# HealthTech Telemedicine Platform
 
-A full-stack, AI-powered healthcare application built with **Next.js**, **Django**, and **Ollama**.
+A modern, enterprise-grade, full-stack telemedicine and clinical triage platform built with **Next.js (App Router)**, **Django REST Framework**, and **Google Gemini AI**.
 
-## Features
+---
 
-- **Role-Based Authentication (JWT):** Secure Patient, Doctor, and Admin portals.
-- **Appointment Booking:** Real-time concurrency protection for slot booking to prevent double booking.
-- **Strict Medical Records (NDPR Compliant):** Doctors can only access records of patients they are actively treating. Patients can only see their own records.
-- **AI Symptom Checker (Triage):** An integrated chat interface utilizing local LLMs (via Ollama) to securely analyze patient symptoms before booking.
-- **Modern UI:** Built with Tailwind CSS and Framer Motion for a stunning, responsive, and animated user experience.
+## 🌟 Key Features
 
-## Architecture
+### 1. AI Clinical Symptom Triage & Specialist Fast-Tracking
+- **Google Gemini Cloud AI:** Live streaming typewriter assessment of patient symptoms with structured clinical explanations.
+- **Typo-Tolerant Red-Flag Detection:** Proprietary heuristic engine detecting critical life-threatening conditions (severe bleeding, acute chest pain, hemoptysis, stroke symptoms, respiratory distress) regardless of patient typos.
+- **1-Click Fast-Track Specialist Booking:** Automatically matches symptoms to qualified clinicians (Pulmonology, Cardiology, Emergency Medicine & Trauma) with single-tap slot reservation directly inside the chat interface.
 
-- **Frontend:** Next.js (App Router), React, Tailwind CSS, Framer Motion
-- **Backend:** Django, Django REST Framework, SQLite (Development)
-- **AI Integration:** Python `requests` communicating with a local Ollama instance (e.g., Llama 3)
-- **Authentication:** `djangorestframework-simplejwt` (Access & Refresh tokens)
+### 2. Emergency Paramedic QR Pass
+- **Offline Scannable Pass:** Instant QR code containing NDPR-compliant emergency data (blood group, allergies, chronic conditions, and next-of-kin contacts).
+- **Public First-Responder Scan:** Secure emergency access for paramedics and ER personnel without authentication barriers.
 
-## Getting Started
+### 3. Telehealth Video Consultations
+- **Integrated Video Room:** Real-time patient-doctor video consultation rooms with camera controls, audio toggling, and live in-call clinical messaging.
+
+### 4. Role-Based Governance & Portals
+- **Admin Portal:** Hospital-wide operational analytics, physician onboarding, specialty management, and patient verification.
+- **Doctor Portal:** Calendar schedule publishing, appointment management, verified EHR drafting, and NDPR-compliant patient records.
+- **Patient Portal:** Appointment scheduling with concurrency race-condition locks, personal EHR history, prescription access, and document upload.
+
+---
+
+## 🏗️ Architecture & Technology Stack
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, Framer Motion, Lucide Icons, Sonner |
+| **Backend** | Django 6, Django REST Framework, SQLite (Development) / PostgreSQL (Production) |
+| **Configuration** | `python-decouple` with `.env` separation for secrets and API keys |
+| **AI Integration** | Google Gemini Generative AI (`gemini-flash-lite-latest` / `gemini-3.5-flash`) with offline heuristic fallback |
+| **Authentication** | JWT (`djangorestframework-simplejwt`) with automatic token rotation & refresh |
+
+---
+
+## 🚀 Getting Started
 
 ### 1. Backend (Django) Setup
 
-```bash
+```powershell
+# Navigate to backend directory
 cd backend
+
+# Create and activate virtual environment
 python -m venv venv
-source venv/Scripts/activate  # On Windows
-pip install -r requirements.txt # Or install django, djangorestframework, djangorestframework-simplejwt, django-cors-headers, requests
+.\venv\Scripts\activate   # Windows PowerShell
+# source venv/bin/activate  # macOS / Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment variables
+# Copy template and add your Gemini API key:
+cp .env.example .env
+
+# Run database migrations and seed data
 python manage.py makemigrations
 python manage.py migrate
-python manage.py createsuperuser
+python create_test_users.py
+
+# Start development server
 python manage.py runserver
 ```
+The Django backend API will be running at **http://127.0.0.1:8000/**.
+
+---
 
 ### 2. Frontend (Next.js) Setup
 
-```bash
+```powershell
+# Navigate to frontend directory
 cd frontend
+
+# Install npm dependencies
 npm install
+
+# Start development server
 npm run dev
 ```
+The Next.js frontend will be running at **http://localhost:3000/**.
 
-### 3. AI Triage (Local LLM)
-Make sure you have [Ollama](https://ollama.com/) installed and running locally on port `11434`.
-```bash
-ollama run llama3
-```
-*Note: If Ollama is not running, the application has a built-in graceful fallback response.*
+---
 
-## License
+## 🔑 Test Credentials
 
-This project is licensed under the MIT License - tailored for final year academic projects. See the [LICENSE](LICENSE) file for details.
+The database comes pre-seeded with multi-specialty clinical staff and test patients:
 
-## Test Credentials
+| Role | Username | Password | Full Name / Specialty |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin` | `adminpass123` | Chief Medical Director (Superuser) |
+| **Doctor** | `doctor` | `doctorpass123` | Dr. Sarah Connor (Cardiologist) |
+| **Doctor** | `dr_babatunde` | `doctorpass123` | Dr. Babatunde Adeleke (Emergency Medicine & Trauma) |
+| **Doctor** | `dr_amina` | `doctorpass123` | Dr. Amina Bello (Consultant Pulmonologist) |
+| **Patient** | `patient` | `patientpass123` | Alex Murphy (Blood Group: O+) |
+| **Patient** | `chioma` | `patientpass123` | Chioma Okonkwo (Blood Group: A+) |
 
-For testing purposes, the following accounts have been created. You can use these credentials to log in and test the different portals.
+For complete testing flows and scenarios, see [`TEST_CREDENTIALS.md`](TEST_CREDENTIALS.md).
 
-| Role | Username | Password |
-| --- | --- | --- |
-| **Admin** | `admin` | `adminpass123` |
-| **Doctor** | `doctor` | `doctorpass123` |
-| **Patient** | `patient` | `patientpass123` |
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.

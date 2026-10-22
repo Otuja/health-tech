@@ -49,7 +49,7 @@ This document provides full credentials and guided testing workflows for the Hea
    - Review your NDPR-protected diagnosis, symptoms, clinical treatment plan, and prescription.
 5. Click **AI Symptom Checker** (`/patient/triage`):
    - Describe symptoms (e.g., *"I have had a mild chest flutter and shortness of breath for two days"*).
-   - Receive intelligent assessment with clinical disclaimers (via Ollama or offline fallback).
+   - Receive intelligent assessment with clinical disclaimers and 1-click specialist fast-track booking (via Google Gemini Cloud AI or clinical fallback).
 6. Click **Emergency Profile (QR)** (`/patient/emergency`):
    - View your emergency card: Blood Group `O+`, emergency contact Ellen Murphy, Allergies (Penicillin, Peanuts), and Chronic Conditions.
    - View your scannable Emergency QR code.

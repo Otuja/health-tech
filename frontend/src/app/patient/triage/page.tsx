@@ -318,39 +318,39 @@ export default function AITriage() {
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col h-[calc(100vh-8rem)] max-w-4xl mx-auto"
+      className="flex flex-col h-[calc(100dvh-13.5rem)] md:h-[calc(100vh-8rem)] max-w-4xl mx-auto"
     >
-      <header className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <header className="mb-2.5 sm:mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-heading">
+          <h1 className="text-xl sm:text-3xl font-bold text-slate-900 font-heading">
             AI Clinical Symptom Triage
           </h1>
-          <p className="text-slate-600 text-xs sm:text-sm mt-0.5">
+          <p className="text-slate-600 text-[11px] sm:text-sm mt-0.5">
             Real-time diagnostic assessment with direct physician booking.
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold shadow-xs">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] sm:text-xs font-semibold shadow-2xs self-start sm:self-auto">
           <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
           <span>Clinical AI Assistant</span>
         </div>
       </header>
 
       {/* Medical Safety Protocol Banner */}
-      <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3 mb-4 text-xs text-amber-900 flex items-center justify-between gap-2.5">
+      <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-2.5 sm:p-3 mb-2.5 sm:mb-4 text-[11px] sm:text-xs text-amber-900 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
           <span>
-            <strong>Clinical Safety Protocol:</strong> In severe emergencies (coughing blood, acute chest pain, stroke signs, difficulty breathing), immediately call <strong>112 / 911</strong> or visit the nearest ER.
+            <strong>Safety Protocol:</strong> In severe emergencies (severe bleeding, chest pain, stroke, breathlessness), call <strong>112 / 911</strong> immediately.
           </span>
         </div>
       </div>
 
       {/* Chat Container */}
-      <div className="flex-1 bg-white rounded-3xl shadow-sm border border-slate-200/80 flex flex-col overflow-hidden">
+      <div className="flex-1 bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200/80 flex flex-col overflow-hidden min-h-0">
         
         {/* Messages Scroll Area */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-5 bg-slate-50/50">
+        <div className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/50">
           {messages.map((msg, idx) => (
             <motion.div 
               initial={{ opacity: 0, y: 8 }}
@@ -549,11 +549,12 @@ export default function AITriage() {
           <div ref={endOfMessagesRef} />
         </div>
 
-        {/* Suggested Quick Starters */}
-        <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-2 text-[11px]">
-          <span className="text-slate-400 self-center font-medium">Quick Assessment:</span>
+        {/* Suggested Quick Starters (Horizontally Swipeable on Mobile) */}
+        <div className="px-3 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-[11px] whitespace-nowrap">
+          <span className="text-slate-400 font-semibold flex-shrink-0 pr-1">Quick Tap:</span>
           {[
             "Coughing blood and shortness of breath",
+            "Severe bleeding from open wound",
             "Chest tightness with mild wheezing",
             "Persistent dry cough & fever for 3 days",
             "Pounding migraine with sensitivity to light"
@@ -563,28 +564,29 @@ export default function AITriage() {
               type="button"
               disabled={loading || isStreaming}
               onClick={() => handleSendPrompt(prompt)}
-              className="px-2.5 py-1 bg-white hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 rounded-lg border border-slate-200 transition-colors shadow-2xs disabled:opacity-50"
+              className="px-3 py-1.5 bg-white hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100 text-slate-700 rounded-xl border border-slate-200/90 transition-colors shadow-2xs disabled:opacity-50 flex-shrink-0 text-xs font-medium"
             >
               {prompt}
             </button>
           ))}
         </div>
 
-        {/* Chat Input */}
-        <div className="p-4 bg-white border-t border-slate-100">
-          <form onSubmit={handleSubmit} className="flex gap-2">
+        {/* Chat Input (Thumb-friendly with iOS zoom prevention) */}
+        <div className="p-2.5 sm:p-4 bg-white border-t border-slate-100">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
             <input 
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe symptoms in detail (duration, severity, past conditions)..."
-              className="flex-1 bg-slate-50 border border-slate-300 focus:bg-white rounded-2xl px-5 py-3 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800"
+              placeholder="Describe symptoms in detail..."
+              className="flex-1 bg-slate-50 border border-slate-300 focus:bg-white rounded-2xl px-4 py-2.5 sm:py-3 text-base sm:text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 placeholder:text-slate-400 min-w-0"
               disabled={loading || isStreaming}
             />
             <button 
               type="submit" 
               disabled={loading || isStreaming || !input.trim()}
-              className="px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center transition-all disabled:opacity-50 shadow-md shadow-emerald-600/20"
+              className="w-11 h-11 sm:w-auto sm:px-5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-2xl flex items-center justify-center transition-all disabled:opacity-50 shadow-md shadow-emerald-600/20 flex-shrink-0"
+              aria-label="Send Message"
             >
               <Send className="w-4 h-4" />
             </button>

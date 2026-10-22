@@ -25,7 +25,7 @@ import {
   HeartPulse,
   Printer
 } from "lucide-react";
-import { authFetch } from "@/lib/api";
+import { authFetch, API_BASE } from "@/lib/api";
 
 interface MedicalRecordItem {
   id: number;
@@ -203,10 +203,10 @@ export default function PatientRecords() {
           </p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <Link
             href="/patient/emergency"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold transition-colors"
           >
             <HeartPulse className="w-4 h-4 text-red-600" />
             <span>Emergency Vitals & QR</span>
@@ -214,7 +214,7 @@ export default function PatientRecords() {
 
           <button
             onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all active:scale-95"
           >
             <FolderPlus className="w-4 h-4" />
             <span>+ Upload Health Document</span>
@@ -238,39 +238,45 @@ export default function PatientRecords() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-200 text-sm font-semibold">
+      {/* Mobile-First Segmented Tabs */}
+      <div className="bg-slate-200/80 p-1 rounded-2xl flex max-w-lg gap-1">
         <button
           onClick={() => setActiveTab("documents")}
-          className={`pb-3 px-4 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
             activeTab === "documents"
-              ? "border-emerald-600 text-emerald-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "bg-white text-emerald-800 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
           }`}
         >
           <Upload className="w-4 h-4" />
-          <span>My Uploaded Health Documents & Lab Tests ({documents.length})</span>
+          <span>EHR Documents</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px]">
+            {documents.length}
+          </span>
         </button>
 
         <button
           onClick={() => setActiveTab("doctor_records")}
-          className={`pb-3 px-4 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
             activeTab === "doctor_records"
-              ? "border-emerald-600 text-emerald-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "bg-white text-emerald-800 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
           }`}
         >
           <FileCheck className="w-4 h-4" />
-          <span>Doctor Encounters & Verified Prescriptions ({records.length})</span>
+          <span>Doctor Encounters</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px]">
+            {records.length}
+          </span>
         </button>
       </div>
 
       {/* TAB 1: PATIENT UPLOADED DOCUMENTS */}
       {activeTab === "documents" && (
         <div className="space-y-6">
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 mr-1">Filter:</span>
+          {/* Category Filter Pills (Swipeable Carousel on Mobile) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs whitespace-nowrap">
+            <span className="text-xs font-semibold text-slate-500 mr-1 flex-shrink-0">Filter:</span>
             {[
               { id: "ALL", label: "All Documents" },
               { id: "LAB_TEST", label: "Lab / Blood Tests" },
@@ -383,7 +389,7 @@ export default function PatientRecords() {
                     <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
                       {doc.file ? (
                         <a
-                          href={`http://localhost:8000${doc.file}`}
+                          href={doc.file.startsWith("http") ? doc.file : `${API_BASE}${doc.file}`}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-colors border border-emerald-200"
@@ -502,13 +508,16 @@ export default function PatientRecords() {
       {/* Upload Health Document Modal */}
       <AnimatePresence>
         {showUploadModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto"
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.95 }}
+              className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]"
             >
+              {/* Drag Handle for Mobile */}
+              <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 sm:hidden" />
+
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -538,7 +547,7 @@ export default function PatientRecords() {
                     placeholder="e.g. Complete Blood Count (CBC) or Chest X-Ray"
                     value={uploadTitle}
                     onChange={(e) => setUploadTitle(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base sm:text-sm bg-white"
                   />
                 </div>
 
@@ -550,7 +559,7 @@ export default function PatientRecords() {
                     <select
                       value={uploadCategory}
                       onChange={(e) => setUploadCategory(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white font-medium"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base sm:text-xs bg-white font-medium"
                     >
                       <option value="LAB_TEST">Laboratory / Blood Test</option>
                       <option value="IMAGING">Radiology / X-Ray / Scan</option>
@@ -570,7 +579,7 @@ export default function PatientRecords() {
                       type="date"
                       value={uploadDate}
                       onChange={(e) => setUploadDate(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base sm:text-xs bg-white"
                     />
                   </div>
                 </div>
@@ -584,7 +593,7 @@ export default function PatientRecords() {
                     placeholder="e.g. Lagoon Hospital, Dr. Adewale"
                     value={uploadFacility}
                     onChange={(e) => setUploadFacility(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base sm:text-sm bg-white"
                   />
                 </div>
 
@@ -597,7 +606,7 @@ export default function PatientRecords() {
                     placeholder="e.g. Hemoglobin 14.2 g/dL, clear lung fields, no abnormalities noted..."
                     value={uploadNotes}
                     onChange={(e) => setUploadNotes(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base sm:text-sm bg-white"
                   />
                 </div>
 
@@ -627,14 +636,14 @@ export default function PatientRecords() {
                   <button
                     type="button"
                     onClick={() => setShowUploadModal(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
+                    className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={uploading}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50 flex items-center gap-1.5 active:scale-95"
                   >
                     {uploading ? (
                       <>
@@ -658,13 +667,15 @@ export default function PatientRecords() {
       {/* Official Prescription Print / PDF Modal */}
       <AnimatePresence>
         {selectedRecordForPrint && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-10 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto"
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.95 }}
+              className="bg-white rounded-t-3xl sm:rounded-3xl max-w-2xl w-full p-6 sm:p-10 shadow-2xl border border-slate-200 max-h-[92dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]"
             >
+              <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 sm:hidden print:hidden" />
+
               {/* Top Modal Controls */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 print:hidden">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">

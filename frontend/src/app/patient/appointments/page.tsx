@@ -148,30 +148,38 @@ export default function AppointmentBooking() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 text-sm font-semibold">
+      {/* Mobile-First Segmented Tabs */}
+      <div className="bg-slate-200/80 p-1 rounded-2xl flex max-w-md gap-1">
         <button
           onClick={() => setActiveTab("book")}
-          className={`pb-3 px-4 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
             activeTab === "book"
-              ? "border-emerald-600 text-emerald-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "bg-white text-emerald-800 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
           }`}
         >
           <Calendar className="w-4 h-4" />
-          <span>Available Clinician Slots ({slots.length})</span>
+          <span>Available Specialists</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px]">
+            {slots.length}
+          </span>
         </button>
 
         <button
           onClick={() => setActiveTab("my_visits")}
-          className={`pb-3 px-4 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
             activeTab === "my_visits"
-              ? "border-emerald-600 text-emerald-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "bg-white text-emerald-800 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
           }`}
         >
           <CalendarCheck className="w-4 h-4" />
-          <span>My Scheduled Consultations ({myAppointments.length})</span>
+          <span>My Visits</span>
+          {myAppointments.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px]">
+              {myAppointments.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -353,13 +361,13 @@ export default function AppointmentBooking() {
         </div>
       )}
 
-      {/* Booking Confirmation Modal */}
+      {/* Booking Confirmation Modal (Bottom-Sheet on Mobile) */}
       {selectedSlotForModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90dvh] overflow-y-auto"
           >
             <h3 className="text-lg font-bold text-slate-900 font-heading mb-1">
               Confirm Doctor Appointment

@@ -13,16 +13,15 @@ import {
   QrCode, 
   LogOut, 
   HeartPulse, 
-  Menu, 
-  X,
   ShieldCheck,
-  UserCheck
+  ShieldAlert,
+  User,
+  Sparkles
 } from "lucide-react";
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem("user_role");
@@ -34,11 +33,11 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
   }, [router]);
 
   const navItems = [
-    { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
-    { name: "Appointments", href: "/patient/appointments", icon: Calendar },
-    { name: "Medical Records & EHR", href: "/patient/records", icon: FileText },
-    { name: "AI Health Triage", href: "/patient/triage", icon: Bot },
-    { name: "Emergency Vitals Pass", href: "/patient/emergency", icon: QrCode, isSpecial: true },
+    { name: "Dashboard", shortName: "Home", href: "/patient/dashboard", icon: LayoutDashboard },
+    { name: "Appointments", shortName: "Visits", href: "/patient/appointments", icon: Calendar },
+    { name: "AI Symptom Triage", shortName: "AI Triage", href: "/patient/triage", icon: Bot, isCenter: true },
+    { name: "Medical Records & EHR", shortName: "Records", href: "/patient/records", icon: FileText },
+    { name: "Emergency Vitals Pass", shortName: "Emergency", href: "/patient/emergency", icon: ShieldAlert, isSpecial: true },
   ];
 
   const handleLogout = () => {
@@ -48,69 +47,45 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row antialiased">
         
-        {/* MOBILE TOP BAR */}
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
+        {/* MOBILE TOP APP BAR (iOS / Android Native Feel) */}
+        <header className="md:hidden bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xs">
           <Link href="/patient/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
-              <HeartPulse className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
+              <HeartPulse className="w-4 h-4" />
             </div>
-            <span className="font-heading font-extrabold text-lg text-slate-900 tracking-tight">
-              Health<span className="text-emerald-600">Tech</span>
-            </span>
+            <div>
+              <span className="font-heading font-extrabold text-base text-slate-900 tracking-tight leading-none block">
+                Health<span className="text-emerald-600">Tech</span>
+              </span>
+              <span className="text-[9px] uppercase font-bold tracking-widest text-emerald-700">
+                Patient App
+              </span>
+            </div>
           </Link>
 
-          <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl text-slate-700 hover:bg-slate-100"
-            aria-label="Toggle Navigation"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
+          <div className="flex items-center gap-2">
+            {/* Quick Emergency Pass Pill */}
+            <Link
+              href="/patient/emergency"
+              className="px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 font-bold text-[11px] flex items-center gap-1 active:scale-95 transition-transform"
+            >
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+              <span>SOS Pass</span>
+            </Link>
 
-        {/* MOBILE SLIDE-DOWN DRAWER */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-1.5 shadow-lg animate-in slide-in-from-top duration-200">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center justify-between px-4 py-2.5 rounded-xl font-semibold text-xs transition-all ${
-                    isActive
-                      ? item.isSpecial
-                        ? "text-white bg-red-600 shadow-sm"
-                        : "text-white bg-emerald-600 shadow-sm"
-                      : item.isSpecial
-                      ? "text-red-700 bg-red-50 hover:bg-red-100"
-                      : "text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </div>
-                  {item.isSpecial && !isActive && (
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  )}
-                </Link>
-              );
-            })}
-
-            <button 
+            {/* Quick Log Out */}
+            <button
               onClick={handleLogout}
-              className="flex items-center space-x-3 text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-xl font-semibold text-xs w-full mt-2 border-t border-slate-100"
+              className="p-1.5 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+              title="Sign Out"
+              aria-label="Sign Out"
             >
               <LogOut className="w-4 h-4" />
-              <span>Log out</span>
             </button>
           </div>
-        )}
+        </header>
 
         {/* DESKTOP SIDEBAR */}
         <aside className="w-64 bg-white border-r border-slate-200/80 p-6 hidden md:flex flex-col justify-between flex-shrink-0 h-screen sticky top-0">
@@ -178,10 +153,78 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
           </div>
         </aside>
 
-        {/* MAIN CONTENT AREA */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
+        {/* MAIN CONTENT AREA (Padding-bottom for docked mobile tab bar) */}
+        <main className="flex-1 p-3.5 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full pb-24 md:pb-8">
           {children}
         </main>
+
+        {/* NATIVE MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly PWA experience) */}
+        <nav 
+          aria-label="Mobile Navigation"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+        >
+          <div className="flex items-center justify-around max-w-md mx-auto">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+
+              // Center Action Button (AI Triage)
+              if (item.isCenter) {
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex flex-col items-center relative -top-3 group"
+                  >
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg active:scale-95 ${
+                      isActive 
+                        ? "bg-gradient-to-tr from-emerald-600 to-emerald-400 text-white shadow-emerald-500/40 ring-4 ring-emerald-100" 
+                        : "bg-slate-900 text-white shadow-slate-900/30 group-hover:bg-emerald-600"
+                    }`}>
+                      <Icon className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <span className={`text-[10px] font-bold mt-1 tracking-tight ${
+                      isActive ? "text-emerald-700" : "text-slate-600"
+                    }`}>
+                      {item.shortName}
+                    </span>
+                  </Link>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all relative ${
+                    isActive 
+                      ? item.isSpecial
+                        ? "text-red-600 font-bold"
+                        : "text-emerald-600 font-bold" 
+                      : item.isSpecial
+                      ? "text-red-700 hover:text-red-800"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <div className="relative">
+                    <Icon className="w-5 h-5" />
+                    {item.isSpecial && !isActive && (
+                      <span className="w-2 h-2 rounded-full bg-red-600 absolute -top-0.5 -right-0.5 animate-pulse" />
+                    )}
+                  </div>
+                  <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">
+                    {item.shortName}
+                  </span>
+                  {isActive && (
+                    <span className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                      item.isSpecial ? "bg-red-600" : "bg-emerald-600"
+                    }`} />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
     </ProtectedRoute>
   );

@@ -344,19 +344,39 @@ export default function PatientEmergencyProfile() {
               </div>
             </div>
 
+            {/* Instant Mobile Call Buttons for First Responders & Patients */}
+            <div className="w-full space-y-2 mb-3">
+              {profile?.emergency_contact_phone && (
+                <a
+                  href={`tel:${profile.emergency_contact_phone}`}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 active:scale-95"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>Call Next-of-Kin ({profile.emergency_contact_phone})</span>
+                </a>
+              )}
+              <a
+                href="tel:112"
+                className="w-full py-2 bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Call Paramedics (112 / 911)</span>
+              </a>
+            </div>
+
             {profile?.uuid && (
               <div className="w-full space-y-2">
                 <button
                   type="button"
                   onClick={copyScanUrl}
-                  className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                  className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-700 active:scale-95"
                 >
                   <span>Copy Emergency URL for Phone</span>
                 </button>
                 <Link 
                   href={`/emergency/${profile.uuid}`} 
                   target="_blank"
-                  className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md shadow-red-600/30"
+                  className="w-full py-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-100 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 border border-slate-700"
                 >
                   <span>Preview Paramedic Scan Page</span>
                   <ExternalLink className="w-3.5 h-3.5" />
