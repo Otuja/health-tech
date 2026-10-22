@@ -17,6 +17,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 from decouple import config, Csv
+# pyrefly: ignore [missing-import]
 import dj_database_url
 
 # AI Clinical Triage Configuration (Google Gemini)
