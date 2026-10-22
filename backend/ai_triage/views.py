@@ -94,52 +94,56 @@ def get_triage_routing_metadata(symptoms: str, ai_analysis: str = "") -> dict:
     doc = None
     specialty = "General Practice"
 
-    # 1. Coughing Blood / Hemoptysis / Respiratory Diseases -> Dr. Amina Bello (Pulmonology)
-    if any(k in user_text for k in ['coughing blood', 'blood in cough', 'blood in phlegm', 'hemoptysis']) or \
-       (any(k in user_text for k in ['lung', 'wheez', 'asthma', 'phlegm', 'respiratory']) and not any(k in user_text for k in ['bleed', 'blead', 'wound', 'stab'])):
-        doc = User.objects.filter(role='DOCTOR', specialization__icontains='Pulmonolog').first()
-        specialty = "Pulmonology & Respiratory Medicine"
+    try:
+        # 1. Coughing Blood / Hemoptysis / Respiratory Diseases -> Dr. Amina Bello (Pulmonology)
+        if any(k in user_text for k in ['coughing blood', 'blood in cough', 'blood in phlegm', 'hemoptysis']) or \
+           (any(k in user_text for k in ['lung', 'wheez', 'asthma', 'phlegm', 'respiratory']) and not any(k in user_text for k in ['bleed', 'blead', 'wound', 'stab'])):
+            doc = User.objects.filter(role='DOCTOR', specialization__icontains='Pulmonolog').first()
+            specialty = "Pulmonology & Respiratory Medicine"
 
-    # 2. Bleeding / Hemorrhage / Acute Trauma / Wounds -> Dr. Babatunde Adeleke (Emergency Medicine & Trauma)
-    elif any(k in user_text for k in ['bleed', 'blead', 'hemorrhag', 'haemorrhag', 'wound', 'cut', 'trauma', 'accident', 'stab', 'injury', 'gush', 'pour']):
-        doc = User.objects.filter(role='DOCTOR', specialization__icontains='Emergency').first()
-        specialty = "Emergency Medicine & Trauma"
+        # 2. Bleeding / Hemorrhage / Acute Trauma / Wounds -> Dr. Babatunde Adeleke (Emergency Medicine & Trauma)
+        elif any(k in user_text for k in ['bleed', 'blead', 'hemorrhag', 'haemorrhag', 'wound', 'cut', 'trauma', 'accident', 'stab', 'injury', 'gush', 'pour']):
+            doc = User.objects.filter(role='DOCTOR', specialization__icontains='Emergency').first()
+            specialty = "Emergency Medicine & Trauma"
 
-    # 3. Chest Pain / Cardiovascular -> Dr. Sarah Connor (Cardiology)
-    elif any(k in user_text for k in ['chest', 'heart', 'palpitat', 'blood pressure', 'angina', 'cardiac']):
-        doc = User.objects.filter(role='DOCTOR', specialization__icontains='Cardiolog').first()
-        specialty = "Cardiology"
+        # 3. Chest Pain / Cardiovascular -> Dr. Sarah Connor (Cardiology)
+        elif any(k in user_text for k in ['chest', 'heart', 'palpitat', 'blood pressure', 'angina', 'cardiac']):
+            doc = User.objects.filter(role='DOCTOR', specialization__icontains='Cardiolog').first()
+            specialty = "Cardiology"
 
-    # 4. If acute emergency -> Dr. Babatunde Adeleke
-    elif is_emergency:
-        doc = User.objects.filter(role='DOCTOR', specialization__icontains='Emergency').first()
-        specialty = "Emergency Medicine & Trauma"
+        # 4. If acute emergency -> Dr. Babatunde Adeleke
+        elif is_emergency:
+            doc = User.objects.filter(role='DOCTOR', specialization__icontains='Emergency').first()
+            specialty = "Emergency Medicine & Trauma"
 
-    # 5. Common Symptoms (Headache, Fatigue, Stomach, Cold, Fever, General) -> General Practice / First Available Clinician
-    else:
-        doc = User.objects.filter(role='DOCTOR', specialization__icontains='General').first() or User.objects.filter(role='DOCTOR').first()
-        specialty = getattr(doc, 'specialization', 'General Practice') if doc else 'General Practice'
+        # 5. Common Symptoms (Headache, Fatigue, Stomach, Cold, Fever, General) -> General Practice / First Available Clinician
+        else:
+            doc = User.objects.filter(role='DOCTOR', specialization__icontains='General').first() or User.objects.filter(role='DOCTOR').first()
+            specialty = getattr(doc, 'specialization', 'General Practice') if doc else 'General Practice'
 
-    # Fallback if preferred specialist not found
-    if not doc:
-        doc = User.objects.filter(role='DOCTOR').first()
+        # Fallback if preferred specialist not found
+        if not doc:
+            doc = User.objects.filter(role='DOCTOR').first()
 
-    doc_info = None
-    if doc:
-        next_slot = Slot.objects.filter(
-            doctor=doc,
-            is_booked=False
-        ).order_by('start_time').first()
-        
-        doc_info = {
-            "id": doc.id,
-            "username": doc.username,
-            "name": doc.get_full_name() or doc.username,
-            "specialization": getattr(doc, 'specialization', specialty),
-            "available_slot_id": next_slot.id if next_slot else None,
-            "slot_start_time": next_slot.start_time.isoformat() if next_slot else None,
-            "slot_display_time": next_slot.start_time.strftime('%a, %b %d at %I:%M %p') if next_slot else None
-        }
+        doc_info = None
+        if doc:
+            next_slot = Slot.objects.filter(
+                doctor=doc,
+                is_booked=False
+            ).order_by('start_time').first()
+            
+            doc_info = {
+                "id": doc.id,
+                "username": doc.username,
+                "name": doc.get_full_name() or doc.username,
+                "specialization": getattr(doc, 'specialization', specialty),
+                "available_slot_id": next_slot.id if next_slot else None,
+                "slot_start_time": next_slot.start_time.isoformat() if next_slot else None,
+                "slot_display_time": next_slot.start_time.strftime('%a, %b %d at %I:%M %p') if next_slot else None
+            }
+    except Exception as e:
+        print("Triage doctor routing lookup fallback:", e)
+        doc_info = None
         
     urgency_level = "CRITICAL / EMERGENCY" if is_emergency else "ROUTINE / SELF-CARE & MONITORING"
     
