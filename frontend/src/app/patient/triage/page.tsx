@@ -382,10 +382,7 @@ export default function AITriage() {
 
                     {/* SMART CLINICAL ACTION & FAST-TRACK BOOKING CARD */}
                     {msg.routing && !Boolean(isStreaming && idx === messages.length - 1) && (() => {
-                      const isEmergency = Boolean(
-                        msg.routing.is_emergency ||
-                        /emergency|critical|life-threatening|serve blead|severe bleed|coughing blood|hemorrhag|chest pain|call 112|call 911/i.test(msg.text)
-                      );
+                      const isEmergency = Boolean(msg.routing.is_emergency);
                       const flagReason = msg.routing.emergency_reason || "Immediate Medical Attention Required";
 
                       return (
@@ -399,7 +396,7 @@ export default function AITriage() {
                                     🚨 Critical Clinical Red Flag: {flagReason}
                                   </span>
                                   <p className="text-xs text-red-900 mt-0.5 leading-relaxed font-medium">
-                                    Symptoms such as severe bleeding, coughing blood, acute chest pain, or trauma warrant immediate clinical action. You can open your paramedic Emergency Pass or fast-track an urgent appointment with our emergency specialist below.
+                                    Symptoms such as severe bleeding, coughing blood, acute chest pain, or trauma warrant immediate clinical action. Please call emergency services (112 / 911) or visit the nearest emergency trauma center immediately.
                                   </p>
                                 </div>
                               </div>
@@ -455,20 +452,23 @@ export default function AITriage() {
                             </div>
                           </div>
                         ) : (
-                          /* Routine / Specialized Care Card */
-                          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          /* Routine / Common Symptom Guidance Card */
+                          <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                             <div className="flex items-start gap-2.5">
                               <Stethoscope className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                               <div>
                                 <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 block">
-                                  Recommended Clinical Specialist
+                                  🌿 Home Care & Physician Consultation
                                 </span>
                                 <p className="font-bold text-xs text-slate-900 mt-0.5">
                                   Dr. {msg.routing.recommended_doctor?.name || "Specialist"} • {msg.routing.recommended_doctor?.specialization || msg.routing.specialty}
                                 </p>
+                                <p className="text-[11px] text-slate-600 mt-0.5">
+                                  Try home remedies above. If symptoms persist for &gt;2-3 days or worsen, book an appointment below.
+                                </p>
                                 {msg.routing.recommended_doctor?.slot_display_time && (
-                                  <p className="text-[11px] text-slate-600 mt-0.5">
-                                    Next Available Slot: <strong className="text-emerald-800">{msg.routing.recommended_doctor.slot_display_time}</strong>
+                                  <p className="text-[10px] text-emerald-700 font-medium mt-0.5">
+                                    Next Available Slot: <strong>{msg.routing.recommended_doctor.slot_display_time}</strong>
                                   </p>
                                 )}
                               </div>
