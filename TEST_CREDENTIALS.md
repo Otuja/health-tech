@@ -104,13 +104,33 @@ This document provides full credentials and guided testing workflows for the Hea
 ---
 
 ### 6. Virtual Telehealth Video Consultation Room
-1. From **My Booked Visits** on either the Patient or Doctor portal, click **"Join Video Call"**.
-2. Opens the encrypted Telehealth Video Room (`/consultation/[appointmentId]`):
-   - **Live WebRTC Stream:** Displays attending physician and patient video feeds with audio activity indicators.
+- **Hosted Production Room:** [https://health-tech-psi.vercel.app/consultation/1](https://health-tech-psi.vercel.app/consultation/1)
+- **Local Development Room:** [http://localhost:3000/consultation/1](http://localhost:3000/consultation/1)
+1. Log in on Device 1 (e.g. Smartphone or Laptop) as **Doctor** (`doctor` / `doctorpass123`).
+2. Log in on Device 2 (e.g. PC or Tablet) as **Patient** (`patient` / `patientpass123`).
+3. Both devices open the video consultation room for Appointment #1:
+   - **Live WebRTC Stream with TURN/STUN Relay:** Enables real-time video and audio feeds across different networks (e.g., mobile cellular 4G/5G <-> home Wi-Fi).
    - **Call Controls:** Mute microphone, toggle camera, or end consultation.
-   - **In-Call Clinical Chat:** Send secure real-time messages and observations during the encounter.
-   - **Encounter Notes Drawer:** View chief complaints and scheduled slot details.
-   - **End Consultation:** Doctor can end call to automatically mark the visit as `COMPLETED`.
+   - **One-Click Reconnect:** Click `🔄 Reconnect` in the header at any time to re-negotiate ICE candidates and signaling without reloading.
+   - **In-Call Clinical Chat:** Real-time messages sent strictly between the attending physician and patient.
+   - **Consultation End Notification:** When either participant leaves or ends the consultation, the other device is notified immediately with a session termination modal.
+
+---
+
+### 7. Profile & Personal Details Management
+- **Patient Profile & Emergency Vitals:** [https://health-tech-psi.vercel.app/patient/profile](https://health-tech-psi.vercel.app/patient/profile)
+  - Allows patients to view and update:
+    - First Name, Last Name, Email address
+    - Blood Group (`A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+`, `O-`)
+    - Date of Birth, Height (cm), Weight (kg)
+    - Emergency Contact Name & Emergency Contact Phone Number
+    - Clinical Allergies & Chronic Conditions (with 1-click addition and removal tags)
+  - All updates sync immediately with the emergency QR pass and backend NDPR encrypted database.
+- **Doctor Profile & Credentials:** [https://health-tech-psi.vercel.app/doctor/profile](https://health-tech-psi.vercel.app/doctor/profile)
+  - Allows physicians to update:
+    - First Name, Last Name, Email address
+    - Clinical Specialization (e.g., *Cardiology*, *Emergency Medicine & Trauma*, *Pulmonology*, *General Practice*)
+  - Updates immediately propagate across the patient booking schedule and prescription generator.
 
 ---
 
