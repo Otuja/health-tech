@@ -19,7 +19,7 @@ def detect_clinical_red_flags(symptoms: str, ai_analysis: str = "") -> tuple[boo
 
     # 1. Severe Bleeding / Hemorrhage (requires bleeding AND explicit acute severity in patient input)
     bleeding_stems = r'(bleed|blead|blood|blod|hemorrhag|haemorrhag|bled)'
-    severity_stems = r'(sever|serve|sevear|heavy|profus|massiv|excess|uncontrol|pour|gush|arterial|deep|wound|stab|knife|accident)'
+    severity_stems = r'(sever|serve|sevear|heavy|profus|massiv|excess|uncontrol|pour|gush|arterial|deep|wound|stab|knife|accident|large|faint|collaps)'
     
     if re.search(bleeding_stems, user_symptoms) and re.search(severity_stems, user_symptoms):
         return True, "Severe Bleeding & Acute Hemorrhage"
@@ -30,6 +30,10 @@ def detect_clinical_red_flags(symptoms: str, ai_analysis: str = "") -> tuple[boo
         'bleeding out', 'arterial bleeding'
     ]
     if any(k in user_symptoms for k in direct_bleeding_emergencies):
+        return True, "Acute Bleeding / Hemorrhagic Red Flag"
+
+    # Any blood combined with vomiting, coughing, spitting, stool, or urine
+    if re.search(r'(vomit|throw up|cough|spit|stool|urine|poop|pee)', user_symptoms) and re.search(r'(blood|bleed|hemorrhag)', user_symptoms):
         return True, "Acute Bleeding / Hemorrhagic Red Flag"
 
     # 2. Acute Respiratory Distress / Suffocation
@@ -75,13 +79,17 @@ def detect_clinical_red_flags(symptoms: str, ai_analysis: str = "") -> tuple[boo
     # 6. Structured AI Header check (ONLY inspects the explicit Urgency Level header line, NOT disclaimers)
     if ai_analysis:
         urgency_match = re.search(
+            r'###?\s*(?:\d+\.?\s*)?(?:urgency level|triage category|classification)[^\n\r]*[\r\n]+\s*([^\n\r]+)',
+            ai_analysis,
+            re.IGNORECASE
+        ) or re.search(
             r'(?:urgency level|triage category|classification)\s*[:\-]\s*([^\n\r]+)', 
             ai_analysis, 
             re.IGNORECASE
         )
         if urgency_match:
             header_line = urgency_match.group(1).lower()
-            if any(term in header_line for term in ['critical emergency', 'immediate er', 'life-threatening emergency']) and \
+            if any(term in header_line for term in ['critical', 'emergency', 'immediate er', 'life-threatening']) and \
                not any(term in header_line for term in ['routine', 'mild', 'home care', 'not an emergency', 'non-emergency']):
                 return True, "Clinical AI Classified Emergency"
 
