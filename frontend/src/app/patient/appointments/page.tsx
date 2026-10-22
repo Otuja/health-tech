@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import Link from "next/link";
 import { 
   Calendar, 
   Clock, 
@@ -12,7 +13,9 @@ import {
   User, 
   CheckCircle2,
   CalendarCheck,
-  AlertCircle
+  AlertCircle,
+  Video,
+  XCircle
 } from "lucide-react";
 import { authFetch } from "@/lib/api";
 
@@ -32,6 +35,7 @@ interface AppointmentItem {
   doctor_name?: string;
   doctor_specialization?: string;
   notes?: string;
+  status?: string;
   slot_start_time?: string;
   slot_end_time?: string;
   created_at?: string;
@@ -101,6 +105,25 @@ export default function AppointmentBooking() {
       toast.error("Network error connecting to booking server.", { id: toastId });
     } finally {
       setBooking(false);
+    }
+  };
+
+  const handleCancelAppointment = async (id: number) => {
+    if (!confirm("Are you sure you want to cancel this appointment? Your reserved slot will be released.")) return;
+    try {
+      const res = await authFetch(`/api/appointments/appointments/${id}/status/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" })
+      });
+      if (res.ok) {
+        toast.success("Appointment successfully cancelled.");
+        fetchSlots();
+      } else {
+        toast.error("Failed to cancel appointment.");
+      }
+    } catch {
+      toast.error("Network error cancelling appointment.");
     }
   };
 
@@ -280,7 +303,7 @@ export default function AppointmentBooking() {
                     )}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <div className="text-xs font-semibold text-slate-700 bg-white px-3.5 py-2 rounded-xl border border-slate-200">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-emerald-600" />
@@ -294,6 +317,33 @@ export default function AppointmentBooking() {
                           {appt.slot_start_time ? new Date(appt.slot_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Consultation"}
                         </span>
                       </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2 w-full sm:w-auto">
+                      {appt.status !== "CANCELLED" ? (
+                        <>
+                          <Link
+                            href={`/consultation/${appt.id}`}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                          >
+                            <Video className="w-4 h-4" />
+                            <span>Join Video Call</span>
+                          </Link>
+                          {appt.status !== "COMPLETED" && (
+                            <button
+                              onClick={() => handleCancelAppointment(appt.id)}
+                              className="inline-flex items-center justify-center gap-1 px-3 py-1 text-[11px] text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Cancel Visit</span>
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <span className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-600 text-xs font-semibold text-center">
+                          Cancelled
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

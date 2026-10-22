@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Calendar, Clock, PlusCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Calendar, Clock, PlusCircle, AlertCircle, Video, CheckCircle2, XCircle } from "lucide-react";
 import { authFetch } from "@/lib/api";
 
 interface SlotItem {
@@ -22,6 +23,7 @@ interface AppointmentItem {
   notes?: string;
   slot_start_time?: string;
   slot_end_time?: string;
+  status?: string;
 }
 
 export default function DoctorAppointments() {
@@ -52,6 +54,24 @@ export default function DoctorAppointments() {
       setLoading(false);
     }
   }, []);
+
+  const handleUpdateStatus = async (id: number, newStatus: string) => {
+    try {
+      const res = await authFetch(`/api/appointments/appointments/${id}/status/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Appointment marked as ${newStatus.toLowerCase()}.`);
+        fetchData();
+      } else {
+        toast.error("Failed to update status.");
+      }
+    } catch {
+      toast.error("Network error updating appointment status.");
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -203,9 +223,27 @@ export default function DoctorAppointments() {
                           </div>
                         </div>
                       </div>
-                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold uppercase tracking-wider self-start sm:self-center">
-                        Slot #{appt.slot}
-                      </span>
+                      <div className="flex items-center gap-2 self-start sm:self-center">
+                        <Link
+                          href={`/consultation/${appt.id}`}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                          <span>Join Video Call</span>
+                        </Link>
+                        {appt.status !== "COMPLETED" && (
+                          <button
+                            onClick={() => handleUpdateStatus(appt.id, "COMPLETED")}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-semibold text-xs border border-slate-200 transition-colors"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Mark Completed</span>
+                          </button>
+                        )}
+                        <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                          {appt.status || "SCHEDULED"}
+                        </span>
+                      </div>
                     </div>
 
                     {appt.notes && (

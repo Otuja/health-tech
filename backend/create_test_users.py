@@ -27,6 +27,11 @@ def create_users():
             'is_superuser': True
         }
     )
+    admin.role = 'ADMIN'
+    admin.is_staff = True
+    admin.is_superuser = True
+    admin.first_name = 'Chief Medical'
+    admin.last_name = 'Director'
     admin.set_password('adminpass123')
     admin.save()
     print("[OK] Admin: admin / adminpass123")

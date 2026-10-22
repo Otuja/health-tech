@@ -84,6 +84,48 @@ This document provides full credentials and guided testing workflows for the Hea
 
 ---
 
+### 5. Admin & Operations Governance Workflow
+1. Navigate to **http://localhost:3000/login**.
+2. Sign in using `admin` / `adminpass123`.
+3. You will be redirected to the **Operations & Governance Portal** (`/admin/dashboard`):
+   - **Live Platform Metrics:** Total Patients, Active Doctors, Consultations Booked, Encrypted EHR & Passes.
+   - **Clinician Credentialing:** One-click toggles to activate or suspend practicing privileges for doctors.
+   - **Telehealth Audit Stream:** Real-time visibility into all booked consultations across the hospital.
+4. Click **Doctor Credentialing** (`/admin/doctors`):
+   - Search physicians by name, specialty, or email.
+   - Filter by active or suspended licenses.
+   - Toggle privileges with instant toast notifications.
+5. Click **Patients & Registry** (`/admin/patients`):
+   - Search the patient registry.
+   - Inspect active emergency QR passes and encrypted document tallies.
+6. Click **Django Admin** in the sidebar (or top right button) to launch the low-level administrative database console (`http://localhost:8000/admin/`).
+7. Click **"+ Onboard New Clinician"** to register and credential new physicians directly from the frontend.
+
+---
+
+### 6. Virtual Telehealth Video Consultation Room
+1. From **My Booked Visits** on either the Patient or Doctor portal, click **"Join Video Call"**.
+2. Opens the encrypted Telehealth Video Room (`/consultation/[appointmentId]`):
+   - **Live WebRTC Stream:** Displays attending physician and patient video feeds with audio activity indicators.
+   - **Call Controls:** Mute microphone, toggle camera, or end consultation.
+   - **In-Call Clinical Chat:** Send secure real-time messages and observations during the encounter.
+   - **Encounter Notes Drawer:** View chief complaints and scheduled slot details.
+   - **End Consultation:** Doctor can end call to automatically mark the visit as `COMPLETED`.
+
+---
+
+### 7. Official Medical Prescription & Encounter Summary Generator
+1. Navigate to **Medical Records** (`/patient/records`).
+2. Under the **"Doctor Encounters & Verified Prescriptions"** tab, click **"Print Official Rx"**.
+3. Displays the print-ready clinical prescription slip featuring:
+   - Hospital Letterhead & Regulatory License numbers.
+   - Attending physician details, patient NDPR identifier, diagnosis, and symptoms.
+   - Official `℞` medication box with dosage, frequency, and treatment directives.
+   - Authenticity stamp and clinician signature line.
+   - Click **"Print / Save as PDF"** to print or export as an official PDF.
+
+---
+
 ## 🛠️ Re-Seeding Test Data
 To re-seed or reset test data at any time:
 ```powershell

@@ -36,12 +36,17 @@ export default function Login() {
         
         if (profileRes.ok) {
           const profile = await profileRes.json();
+          localStorage.setItem("user_role", profile.role || "PATIENT");
+
           const displayName = profile.role === 'DOCTOR' 
             ? `Dr. ${profile.last_name || profile.username}` 
             : (profile.first_name || profile.username);
           toast.success(`Welcome back, ${displayName}!`);
+
           if (profile.role === 'DOCTOR') {
             router.push("/doctor/dashboard");
+          } else if (profile.role === 'ADMIN' || profile.is_staff || profile.is_superuser) {
+            router.push("/admin/dashboard");
           } else {
             router.push("/patient/dashboard");
           }

@@ -14,11 +14,33 @@ class Slot(models.Model):
         return f"{self.doctor.username} - {self.start_time.strftime('%Y-%m-%d %H:%M')}"
 
 class Appointment(models.Model):
+    class Status(models.TextChoices):
+        SCHEDULED = 'SCHEDULED', 'Scheduled'
+        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
+        COMPLETED = 'COMPLETED', 'Completed'
+        CANCELLED = 'CANCELLED', 'Cancelled'
+
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='appointments_as_patient')
     doctor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='appointments_as_doctor')
     slot = models.OneToOneField(Slot, on_delete=models.PROTECT, related_name='appointment')
     notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.SCHEDULED)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
-        return f"Appointment: {self.patient.username} with {self.doctor.username} at {self.slot.start_time}"
+        return f"Appointment: {self.patient.username} with {self.doctor.username} ({self.status}) at {self.slot.start_time}"
+
+class ConsultationMessage(models.Model):
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Msg from {self.sender.username} on Appt {self.appointment.id}"

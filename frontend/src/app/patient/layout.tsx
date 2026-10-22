@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { clearAuth } from "@/lib/api";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -23,6 +24,15 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    const role = localStorage.getItem("user_role");
+    if (role === "ADMIN") {
+      router.push("/admin/dashboard");
+    } else if (role === "DOCTOR") {
+      router.push("/doctor/dashboard");
+    }
+  }, [router]);
+
   const navItems = [
     { name: "Dashboard", href: "/patient/dashboard", icon: LayoutDashboard },
     { name: "Appointments", href: "/patient/appointments", icon: Calendar },
@@ -32,8 +42,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    clearAuth();
     router.push("/login");
   };
 
