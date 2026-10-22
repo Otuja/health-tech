@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/api";
@@ -20,7 +21,10 @@ import {
   FileText, 
   Send, 
   Volume2,
-  X
+  X,
+  CheckCircle2,
+  ArrowRight,
+  Activity
 } from "lucide-react";
 
 interface AppointmentData {
@@ -57,6 +61,14 @@ interface SignalItem {
   created_at: string;
 }
 
+interface CallEndedData {
+  endedBy: string;
+  endedByName: string;
+  duration: string;
+  reason: string;
+  timestamp: string;
+}
+
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -82,7 +94,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const [callDuration, setCallDuration] = useState(0);
   const [activeTab, setActiveTab] = useState<"chat" | "notes" | null>("chat");
 
-  // Messages State (Exclusively Doctor & Patient - No Mock Bots)
+  // Messages State (Direct Doctor & Patient Messaging)
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
@@ -102,13 +114,18 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const [peerState, setPeerState] = useState<string>("initializing");
   const [audioNeedsUnlock, setAudioNeedsUnlock] = useState(false);
 
+  // Call Ended Modal State (Industrial Standard Notification)
+  const [callEndedModalOpen, setCallEndedModalOpen] = useState(false);
+  const [callEndedData, setCallEndedData] = useState<CallEndedData | null>(null);
+
   // Timer Effect
   useEffect(() => {
+    if (callEndedModalOpen) return;
     const timer = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [callEndedModalOpen]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -116,7 +133,20 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  // Helper to transmit WebRTC signaling data through backend
+  // Helper to cleanly release camera and mic hardware tracks
+  const stopMediaTracks = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
+    setRemoteStreamActive(false);
+  }, []);
+
+  // Transmit WebRTC signaling data through backend
   const sendSignal = useCallback(async (type: string, payload: any = {}) => {
     try {
       await authFetch(`/api/appointments/appointments/${appointmentId}/signal/`, {
@@ -129,13 +159,26 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [appointmentId]);
 
-  // Fetch Appointment Details
+  // Fetch Appointment Details & status checks
   const fetchAppointmentDetails = useCallback(async () => {
     try {
       const res = await authFetch(`/api/appointments/appointments/${appointmentId}/`);
       if (res.ok) {
         const data = await res.json();
         setAppointment(data);
+
+        // Check if appointment is already completed on server
+        if (data.status === "COMPLETED" && !callEndedModalOpen) {
+          stopMediaTracks();
+          setCallEndedData(prev => prev || {
+            endedBy: "Doctor",
+            endedByName: data.doctor_name || "Physician",
+            duration: formatTimer(callDuration),
+            reason: "This consultation encounter has been officially finalized and archived.",
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+          setCallEndedModalOpen(true);
+        }
       } else {
         toast.error("Consultation room not found or session has expired.");
       }
@@ -144,7 +187,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     } finally {
       setLoading(false);
     }
-  }, [appointmentId]);
+  }, [appointmentId, callEndedModalOpen, callDuration, stopMediaTracks]);
 
   // Fetch Authentic Messages (Polls every 2s for live chat)
   const fetchMessages = useCallback(async () => {
@@ -169,7 +212,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerRef.current = pc;
 
-    // Attach local audio/video tracks to the peer connection
+    // Attach local audio/video tracks to peer connection
     localStream.getTracks().forEach((track) => {
       pc.addTrack(track, localStream);
     });
@@ -180,7 +223,6 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = event.streams[0];
           remoteVideoRef.current.play().catch(() => {
-            // Mobile browser user-gesture policy might pause unmuted audio
             setAudioNeedsUnlock(true);
           });
         }
@@ -214,7 +256,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     return pc;
   }, [sendSignal]);
 
-  // Initiate an offer (typically triggered by DOCTOR or on peer join)
+  // Initiate an offer
   const createAndSendOffer = useCallback(async () => {
     const pc = peerRef.current;
     if (!pc) return;
@@ -231,23 +273,41 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [sendSignal]);
 
-  // Handle incoming signaling messages from the other device
+  // Handle incoming signaling messages from other device
   const handleSignal = useCallback(async (sig: SignalItem) => {
-    const pc = peerRef.current;
-    if (!pc) return;
-
     try {
+      // 1. CALL ENDED SIGNAL (Either party concluded the encounter)
+      if (sig.type === "call_ended") {
+        stopMediaTracks();
+        
+        const endedByRole = sig.payload?.endedBy === "DOCTOR" ? "Doctor" : "Patient";
+        const endedByName = sig.payload?.endedByName || (sig.payload?.endedBy === "DOCTOR" ? appointment?.doctor_name : appointment?.patient_name) || "Consultation Participant";
+
+        setCallEndedData({
+          endedBy: endedByRole,
+          endedByName: endedByName,
+          duration: sig.payload?.duration || formatTimer(callDuration),
+          reason: endedByRole === "Doctor" 
+            ? "The attending physician has concluded the video consultation and recorded the clinical encounter."
+            : "The patient has concluded the teleconsultation session.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+        setCallEndedModalOpen(true);
+        toast.info(`Call ended by ${endedByName}`);
+        return;
+      }
+
+      const pc = peerRef.current;
+      if (!pc) return;
+
       if (sig.type === "join") {
-        // Peer has arrived or reconnected. If we are doctor, initiate offer
         const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
         if (currentRole === "DOCTOR") {
           await createAndSendOffer();
         }
       } else if (sig.type === "offer") {
-        // Remote sent an offer
         await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
         
-        // Flush any candidates that arrived before offer
         while (queuedCandidates.current.length > 0) {
           const candidate = queuedCandidates.current.shift();
           if (candidate) {
@@ -255,12 +315,10 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           }
         }
 
-        // Generate and transmit answer back
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         await sendSignal("answer", answer);
       } else if (sig.type === "answer") {
-        // Remote answered our offer
         if (pc.signalingState === "have-local-offer") {
           await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
           
@@ -283,10 +341,11 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     } catch (err) {
       console.warn("Error handling incoming signal:", err);
     }
-  }, [createAndSendOffer, sendSignal]);
+  }, [appointment, callDuration, createAndSendOffer, sendSignal, stopMediaTracks]);
 
-  // Poll for new signals from the other participant
+  // Poll for new signals
   const pollSignals = useCallback(async () => {
+    if (callEndedModalOpen) return;
     try {
       const res = await authFetch(`/api/appointments/appointments/${appointmentId}/signals/?since=${lastSignalIdRef.current}`);
       if (res.ok) {
@@ -301,9 +360,9 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     } catch {
       // silent polling catch
     }
-  }, [appointmentId, handleSignal]);
+  }, [appointmentId, handleSignal, callEndedModalOpen]);
 
-  // Unlock audio on mobile devices if browser autoplay policy paused remote audio
+  // Unlock audio on mobile devices
   const handleUnlockAudio = () => {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.play().then(() => {
@@ -336,13 +395,9 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           }
           setHasCameraAccess(true);
 
-          // Setup Peer Connection with this stream
           initPeerConnection(stream);
-
-          // Announce presence to other participant
           await sendSignal("join", { timestamp: Date.now() });
 
-          // If doctor, also generate initial offer after short delay for peer to be ready
           const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
           if (currentRole === "DOCTOR") {
             setTimeout(() => {
@@ -362,28 +417,18 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
     return () => {
       isMounted = false;
-      if (peerRef.current) {
-        peerRef.current.close();
-        peerRef.current = null;
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
+      stopMediaTracks();
     };
-  }, [initPeerConnection, sendSignal, createAndSendOffer]);
+  }, [initPeerConnection, sendSignal, createAndSendOffer, stopMediaTracks]);
 
-  // Polling Loops (Messages & WebRTC Signaling)
+  // Polling Loops (Messages & Signaling)
   useEffect(() => {
     const role = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
     setUserRole(role);
     fetchAppointmentDetails();
     fetchMessages();
 
-    // Fast polling for signals (every 1.5s) to guarantee snappy connection
     const signalInterval = setInterval(pollSignals, 1500);
-
-    // Fast polling for authentic messages (every 2s)
     const msgInterval = setInterval(fetchMessages, 2000);
 
     return () => {
@@ -442,7 +487,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     toast.info(nextMuted ? "Microphone muted" : "Microphone unmuted");
   };
 
-  // Send Direct Doctor <-> Patient Message (No AI bot / No simulated replies)
+  // Send Direct Doctor <-> Patient Message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -472,7 +517,21 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   };
 
+  // End Call Initiation: Notifies peer, updates status, and presents summary modal
   const handleEndCall = async () => {
+    const durationStr = formatTimer(callDuration);
+    const selfName = userRole === "DOCTOR" 
+      ? (appointment?.doctor_name || "Doctor") 
+      : (appointment?.patient_name || "Patient");
+
+    // 1. Notify remote peer that the call has ended
+    await sendSignal("call_ended", {
+      endedBy: userRole,
+      endedByName: selfName,
+      duration: durationStr
+    });
+
+    // 2. If Doctor, mark appointment COMPLETED in database
     if (userRole === "DOCTOR") {
       try {
         await authFetch(`/api/appointments/appointments/${appointmentId}/status/`, {
@@ -480,15 +539,27 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: "COMPLETED" })
         });
-        toast.success("Consultation successfully marked as completed.");
-        router.push("/doctor/dashboard");
-        return;
       } catch {
-        // fallback redirect
+        // silent catch
       }
     }
-    
-    toast.info("Consultation ended.");
+
+    // 3. Stop camera and microphone hardware tracks
+    stopMediaTracks();
+
+    // 4. Open summary modal on initiator device
+    setCallEndedData({
+      endedBy: "You",
+      endedByName: selfName,
+      duration: durationStr,
+      reason: "You concluded the teleconsultation encounter.",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    setCallEndedModalOpen(true);
+  };
+
+  // Navigate away after reviewing call summary
+  const handleLeaveToDashboard = () => {
     if (userRole === "DOCTOR") {
       router.push("/doctor/dashboard");
     } else if (userRole === "ADMIN") {
@@ -547,7 +618,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
             <button
               onClick={handleEndCall}
-              className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-red-600/30"
+              className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-red-600/30 active:scale-95"
             >
               <PhoneOff className="w-3.5 h-3.5" />
               <span>End Call</span>
@@ -603,7 +674,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1 max-w-sm">
                   {userRole === "DOCTOR" 
-                    ? "Ensure the patient has logged into this consultation room from their device." 
+                    ? "Ensure the patient has opened this consultation room from their device." 
                     : "Connecting with physician. Please keep camera and microphone enabled."}
                 </p>
               </div>
@@ -636,7 +707,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
               )}
             </div>
 
-            {/* Local Video Stream Element: Muted to prevent echo */}
+            {/* Local Video Stream Element: Muted to prevent audio feedback */}
             <video 
               ref={localVideoRef} 
               autoPlay 
@@ -843,12 +914,88 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
           <button
             onClick={handleEndCall}
-            className="px-5 py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-all shadow-lg shadow-red-600/30 flex items-center gap-2"
+            className="px-5 py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 active:scale-95"
           >
             <PhoneOff className="w-5 h-5" />
             <span className="hidden sm:inline">End Consultation</span>
           </button>
         </footer>
+
+        {/* INDUSTRIAL-STANDARD CALL ENDED RECAP & NOTIFICATION MODAL */}
+        <AnimatePresence>
+          {callEndedModalOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 text-center text-white shadow-2xl relative overflow-hidden"
+              >
+                {/* Background Glow */}
+                <div className="absolute -top-16 -right-16 w-44 h-44 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-16 -left-16 w-44 h-44 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
+
+                {/* Hero Icon */}
+                <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border-2 border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-emerald-500/10">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-mono text-emerald-400 mb-2">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>NDPR ENCRYPTED ENCOUNTER SAVED</span>
+                </div>
+
+                <h2 className="text-xl sm:text-2xl font-extrabold text-white font-heading tracking-tight">
+                  Consultation Concluded
+                </h2>
+
+                <p className="text-slate-300 text-xs sm:text-sm mt-1 leading-relaxed">
+                  {callEndedData?.reason || "This clinical teleconsultation encounter has been successfully finalized."}
+                </p>
+
+                {/* Encounter Stats Grid */}
+                <div className="grid grid-cols-3 gap-2 my-6 p-3.5 bg-slate-950/70 rounded-2xl border border-slate-800/80 text-left">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Duration</span>
+                    <span className="text-xs sm:text-sm font-bold font-mono text-emerald-400">
+                      {callEndedData?.duration || formatTimer(callDuration)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Concluded By</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-200 truncate block">
+                      {callEndedData?.endedByName || "Clinician"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Time</span>
+                    <span className="text-xs sm:text-sm font-bold font-mono text-slate-300">
+                      {callEndedData?.timestamp || "Recorded"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Navigation Actions */}
+                <div className="space-y-2.5">
+                  <button
+                    onClick={handleLeaveToDashboard}
+                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <span>Return to Dashboard</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <Link
+                    href={userRole === "DOCTOR" ? "/doctor/records" : "/patient/records"}
+                    className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs block transition-colors"
+                  >
+                    View Electronic Medical Records
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
       </div>
     </ProtectedRoute>
