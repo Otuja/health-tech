@@ -11,6 +11,7 @@ frontend/.env.*.local
 !.env.example
 !backend/.env.example
 !frontend/.env.example
+.agents/mcp_config.json
 
 # Python / Django
 __pycache__/
