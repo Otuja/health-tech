@@ -26,7 +26,8 @@ import {
   ArrowRight,
   Activity,
   RotateCw,
-  AlertCircle
+  AlertCircle,
+  ArrowLeftRight
 } from "lucide-react";
 
 interface AppointmentData {
@@ -139,6 +140,9 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const mediaElementSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+
+  // Picture-in-Picture layout swap: false = remote is big, self is PiP; true = self is big, remote is PiP (WhatsApp style)
+  const [swappedFeeds, setSwappedFeeds] = useState(false);
 
   // Call Ended Modal State (Industrial Standard Notification)
   const [callEndedModalOpen, setCallEndedModalOpen] = useState(false);
@@ -834,52 +838,62 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between relative overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
+      <div className="h-screen h-[100dvh] max-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between relative overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
         
-        {/* TOP STATUS BAR: Modern White + Green Theme */}
-        <header className="px-4 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200/90 flex items-center justify-between z-20 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-xs">
+        {/* TOP STATUS BAR: Responsive & Zero Overflow */}
+        <header className="px-3 sm:px-6 py-2.5 sm:py-3 bg-white/95 backdrop-blur-md border-b border-slate-200/90 flex items-center justify-between z-20 shadow-xs flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-xs flex-shrink-0">
               <Stethoscope className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-heading font-bold text-sm text-slate-900 tracking-tight">
-                  HealthTech Teleconsultation Room
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-heading font-bold text-xs sm:text-sm text-slate-900 tracking-tight truncate max-w-[140px] sm:max-w-xs">
+                  {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient Call") : (appointment?.doctor_name ? `Dr. ${appointment.doctor_name}` : "Clinical Call")}
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex-shrink-0">
                   <span className={`w-1.5 h-1.5 rounded-full ${remoteStreamActive ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                  {remoteStreamActive ? "P2P WebRTC Connected" : "Connecting Peer..."}
+                  <span className="hidden xs:inline">{remoteStreamActive ? "Live" : "Connecting"}</span>
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
-                {appointment ? `${appointment.doctor_name} (${appointment.doctor_specialization}) • Patient: ${appointment.patient_name}` : "Connecting to clinical session..."}
+              <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
+                {appointment?.doctor_specialization || "Telehealth Encounter"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
             {audioNeedsUnlock && (
               <button
                 onClick={handleUnlockAudio}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md animate-pulse"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] sm:text-xs font-bold shadow-md animate-pulse"
               >
                 <Volume2 className="w-3.5 h-3.5" />
-                <span>Tap to Enable Audio</span>
+                <span className="hidden sm:inline">Enable Audio</span>
               </button>
             )}
 
+            {/* Quick Swap Feeds Button in Header */}
+            <button
+              onClick={() => setSwappedFeeds(prev => !prev)}
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors active:scale-95"
+              title="Swap Big & Small Viewports"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Swap</span>
+            </button>
+
             <button
               onClick={handleReconnect}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors active:scale-95"
+              className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors active:scale-95"
               title="Reset P2P video stream if connection stalled"
             >
               <RotateCw className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Reconnect</span>
+              <span className="hidden sm:inline">Reconnect</span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono font-medium text-slate-700">
-              <Clock className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-[10px] sm:text-xs font-mono font-medium text-slate-700">
+              <Clock className="w-3 h-3 text-emerald-600" />
               <span>{formatTimer(callDuration)}</span>
             </div>
 
@@ -887,135 +901,169 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>NDPR AES-256</span>
             </div>
-
-            <button
-              onClick={handleEndCall}
-              className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-rose-600/25 active:scale-95"
-            >
-              <PhoneOff className="w-3.5 h-3.5" />
-              <span>End Call</span>
-            </button>
           </div>
         </header>
 
-        {/* MAIN VIDEO FEEDS AREA */}
-        <main className="flex-1 p-3 sm:p-5 flex flex-col lg:flex-row gap-4 items-stretch justify-center relative overflow-hidden max-w-7xl w-full mx-auto">
-          
-          {/* Main Remote Feed: Doctor viewing Patient, or Patient viewing Doctor */}
-          <div className="flex-1 bg-slate-950 rounded-3xl border border-slate-300/80 relative overflow-hidden flex flex-col justify-between p-4 shadow-xl min-h-[360px]">
+        {/* MAIN VIDEO FEEDS AREA: WhatsApp Style Stacked PiP with Tap-to-Swap */}
+        <main className="flex-1 p-2 sm:p-4 flex relative overflow-hidden w-full max-w-7xl mx-auto min-h-0">
+          <div className="relative w-full h-full flex-1 bg-slate-950 rounded-2xl sm:rounded-3xl border border-slate-300/80 shadow-xl overflow-hidden min-h-[300px]">
             
-            {/* Remote Participant Label */}
-            <div className="flex items-center justify-between z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-xs">
-                <span className={`w-2 h-2 rounded-full ${remoteStreamActive ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`} />
-                <span className="font-bold text-white">
-                  {userRole === "DOCTOR" 
-                    ? (appointment?.patient_name || "Patient") 
-                    : (appointment?.doctor_name || "Physician")}
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  {userRole === "DOCTOR" ? "Patient Feed" : appointment?.doctor_specialization}
-                </span>
-              </div>
-            </div>
-
-            {/* REAL REMOTE VIDEO STREAM ELEMENT */}
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-                remoteStreamActive ? "opacity-100 z-0" : "opacity-0 pointer-events-none -z-10"
+            {/* FEED A: REMOTE PARTICIPANT FEED */}
+            <div 
+              onClick={() => {
+                if (swappedFeeds) setSwappedFeeds(false);
+              }}
+              className={`transition-all duration-300 ease-in-out ${
+                !swappedFeeds
+                  ? "absolute inset-0 w-full h-full z-0 flex flex-col justify-between p-3 sm:p-4"
+                  : "absolute top-3 right-3 sm:top-5 sm:right-5 w-28 sm:w-44 h-40 sm:h-60 rounded-2xl sm:rounded-3xl shadow-2xl border-2 border-white/95 z-20 overflow-hidden cursor-pointer active:scale-95 hover:border-emerald-400 group p-2 flex flex-col justify-between bg-slate-900"
               }`}
-            />
-
-            {/* Connecting / Standby Placeholder shown while waiting for peer stream */}
-            {!remoteStreamActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-emerald-600/20 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 text-3xl font-bold shadow-2xl shadow-emerald-500/10 mb-4 animate-pulse">
-                  {userRole === "DOCTOR" 
-                    ? (appointment?.patient_name?.charAt(0) || "P")
-                    : (appointment?.doctor_name?.charAt(0) || "D")}
+            >
+              {/* Remote Participant Label */}
+              <div className="flex items-center justify-between z-10 pointer-events-none">
+                <div className={`inline-flex items-center gap-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-white ${
+                  !swappedFeeds ? "px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs" : "px-2 py-0.5 text-[10px]"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${remoteStreamActive ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`} />
+                  <span className="font-bold truncate max-w-[110px] sm:max-w-none">
+                    {userRole === "DOCTOR" 
+                      ? (appointment?.patient_name || "Patient") 
+                      : (appointment?.doctor_name || "Physician")}
+                  </span>
+                  {swappedFeeds && (
+                    <span className="text-[9px] text-emerald-400 font-semibold hidden sm:inline">(Tap to expand)</span>
+                  )}
                 </div>
-                <p className="text-sm font-semibold text-slate-200">
-                  {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Doctor")}
-                </p>
-                <p className="text-xs text-emerald-400 mt-1 font-medium flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  Connecting peer-to-peer clinical stream...
-                </p>
-                <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
-                  {userRole === "DOCTOR" 
-                    ? "Ensure the patient has opened this consultation room from their device." 
-                    : "Connecting with physician. Please keep camera and microphone enabled."}
-                </p>
+                {swappedFeeds && (
+                  <div className="w-5 h-5 rounded-full bg-slate-900/80 text-emerald-400 flex items-center justify-center border border-slate-700/80 group-hover:scale-110 transition-transform">
+                    <ArrowLeftRight className="w-2.5 h-2.5" />
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Bottom Audio / Connection Status Indicator */}
-            <div className="z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 self-start text-[11px] text-slate-300">
-              <div className="flex items-center gap-0.5">
-                <span className={`w-1 h-2.5 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce" : "bg-slate-600"}`} />
-                <span className={`w-1 h-4 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce delay-75" : "bg-slate-600"}`} />
-                <span className={`w-1 h-3 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce delay-150" : "bg-slate-600"}`} />
-              </div>
-              <span className="ml-1 text-[10px] font-medium">
-                {remoteStreamActive ? "Live WebRTC Audio & Video" : "Waiting for Peer Video"}
-              </span>
-            </div>
-          </div>
+              {/* REAL REMOTE VIDEO STREAM ELEMENT */}
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none ${
+                  remoteStreamActive ? "opacity-100 z-0" : "opacity-0 -z-10"
+                }`}
+              />
 
-          {/* Local User Self-Preview Window */}
-          <div className="w-full lg:w-80 h-52 lg:h-auto bg-slate-950 rounded-3xl border border-slate-300/80 relative overflow-hidden flex flex-col justify-between p-3.5 shadow-xl flex-shrink-0">
-            <div className="flex items-center justify-between z-10">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-[11px] font-bold text-white flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${!videoDisabled && hasCameraAccess ? "bg-emerald-400" : "bg-amber-400"}`} />
-                You ({userRole === "DOCTOR" ? "Dr. Self" : "Patient Self"})
-              </span>
-              {audioMuted && (
-                <span className="p-1 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  <MicOff className="w-3.5 h-3.5" />
-                </span>
+              {/* Connecting / Standby Placeholder shown while waiting for peer stream */}
+              {!remoteStreamActive && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-4 text-center pointer-events-none">
+                  <div className={`${!swappedFeeds ? "w-20 h-20 sm:w-24 sm:h-24 text-2xl sm:text-3xl mb-3" : "w-10 h-10 text-base mb-1"} rounded-full bg-emerald-600/20 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold shadow-xl animate-pulse`}>
+                    {userRole === "DOCTOR" 
+                      ? (appointment?.patient_name?.charAt(0) || "P")
+                      : (appointment?.doctor_name?.charAt(0) || "D")}
+                  </div>
+                  <p className={`font-semibold text-slate-200 ${!swappedFeeds ? "text-sm" : "text-[11px] truncate max-w-[90px]"}`}>
+                    {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Doctor")}
+                  </p>
+                  {!swappedFeeds && (
+                    <>
+                      <p className="text-xs text-emerald-400 mt-1 font-medium flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        Connecting clinical stream...
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+                        Keep camera and mic on while connecting.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Bottom Audio / Connection Status Indicator (Big view only) */}
+              {!swappedFeeds && (
+                <div className="z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 self-start text-[11px] text-slate-300 pointer-events-none">
+                  <div className="flex items-center gap-0.5">
+                    <span className={`w-1 h-2.5 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce" : "bg-slate-600"}`} />
+                    <span className={`w-1 h-4 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce delay-75" : "bg-slate-600"}`} />
+                    <span className={`w-1 h-3 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce delay-150" : "bg-slate-600"}`} />
+                  </div>
+                  <span className="ml-1 text-[10px] font-medium">
+                    {remoteStreamActive ? "Live WebRTC Audio & Video" : "Waiting for Peer Video"}
+                  </span>
+                </div>
               )}
             </div>
 
-            {/* Local Video Stream Element: Muted to prevent audio feedback */}
-            <video 
-              ref={localVideoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                hasCameraAccess && !videoDisabled ? "opacity-100 z-0" : "opacity-0 pointer-events-none -z-10"
-              }`} 
-            />
-
-            {/* Camera Muted or Fallback Preview Overlay */}
-            {(!hasCameraAccess || videoDisabled) && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-4 text-center z-5">
-                <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xl mb-2 shadow-inner">
-                  <User className="w-7 h-7 text-slate-400" />
+            {/* FEED B: LOCAL SELF PREVIEW (Doctor or Patient Self Feed) */}
+            <div 
+              onClick={() => {
+                if (!swappedFeeds) setSwappedFeeds(true);
+              }}
+              className={`transition-all duration-300 ease-in-out ${
+                swappedFeeds
+                  ? "absolute inset-0 w-full h-full z-0 flex flex-col justify-between p-3 sm:p-4"
+                  : "absolute top-3 right-3 sm:top-5 sm:right-5 w-28 sm:w-44 h-40 sm:h-60 rounded-2xl sm:rounded-3xl shadow-2xl border-2 border-white/95 z-20 overflow-hidden cursor-pointer active:scale-95 hover:border-emerald-400 group p-2 flex flex-col justify-between bg-slate-900"
+              }`}
+            >
+              {/* Local Header Label */}
+              <div className="flex items-center justify-between z-10 pointer-events-none">
+                <div className={`inline-flex items-center gap-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-white ${
+                  swappedFeeds ? "px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs" : "px-2 py-0.5 text-[10px]"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${!videoDisabled && hasCameraAccess ? "bg-emerald-400" : "bg-amber-400"}`} />
+                  <span className="font-bold">You</span>
+                  {!swappedFeeds && (
+                    <span className="text-[9px] text-emerald-400 font-semibold hidden sm:inline">(Tap to expand)</span>
+                  )}
                 </div>
-                <p className="text-xs font-semibold text-slate-200">
-                  {videoDisabled ? "Camera Paused" : "Self Camera Active"}
-                </p>
-                <p className="text-[10px] text-slate-400 mt-0.5 max-w-[200px]">
-                  {videoDisabled ? "Click camera icon below to turn video back on" : "Encrypted Local Stream"}
-                </p>
+                {!swappedFeeds && (
+                  <div className="w-5 h-5 rounded-full bg-slate-900/80 text-emerald-400 flex items-center justify-center border border-slate-700/80 group-hover:scale-110 transition-transform">
+                    <ArrowLeftRight className="w-2.5 h-2.5" />
+                  </div>
+                )}
+                {audioMuted && swappedFeeds && (
+                  <span className="p-1 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    <MicOff className="w-3.5 h-3.5" />
+                  </span>
+                )}
               </div>
-            )}
 
-            <div className="z-10 flex items-center justify-between w-full">
-              <span className="text-[10px] text-slate-400 font-mono">
-                {videoDisabled ? "Video Muted" : "Local Feed"}
-              </span>
-              <span className="text-[10px] text-emerald-400 font-mono font-medium">
-                {peerState === "connected" ? "P2P Synced" : peerState}
-              </span>
+              {/* REAL LOCAL VIDEO STREAM ELEMENT (Muted to prevent audio feedback) */}
+              <video 
+                ref={localVideoRef} 
+                autoPlay 
+                playsInline 
+                muted 
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none ${
+                  hasCameraAccess && !videoDisabled ? "opacity-100 z-0" : "opacity-0 -z-10"
+                }`} 
+              />
+
+              {/* Local Fallback Preview Overlay */}
+              {(!hasCameraAccess || videoDisabled) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-2 text-center z-5 pointer-events-none">
+                  <div className={`${swappedFeeds ? "w-14 h-14" : "w-8 h-8"} rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold mb-1 shadow-inner`}>
+                    <User className={`${swappedFeeds ? "w-7 h-7" : "w-4 h-4"} text-slate-400`} />
+                  </div>
+                  <p className={`font-semibold text-slate-200 ${swappedFeeds ? "text-xs" : "text-[10px]"}`}>
+                    {videoDisabled ? "Camera Off" : "Audio Only"}
+                  </p>
+                </div>
+              )}
+
+              {/* Footer Indicator */}
+              <div className="z-10 flex items-center justify-between w-full pointer-events-none">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {videoDisabled ? "Muted" : "Self Feed"}
+                </span>
+                {swappedFeeds && (
+                  <span className="text-[10px] text-emerald-400 font-mono font-medium">
+                    {peerState === "connected" ? "Synced" : peerState}
+                  </span>
+                )}
+              </div>
             </div>
+
           </div>
 
-          {/* Right Side Drawer: Direct Doctor <-> Patient In-Call Chat & Notes (Modern White + Green Theme) */}
+          {/* Right Side Drawer / Mobile Slide-up Sheet: Direct In-Call Chat & Notes */}
           <AnimatePresence>
             {activeTab && (
               <motion.div 
@@ -1143,63 +1191,72 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
         </main>
 
-        {/* BOTTOM FLOATING CONTROLS BAR: Modern White + Green Theme with Speaker Booster */}
-        <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 flex items-center justify-center z-30">
-          <footer className="p-2.5 sm:p-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-2xl rounded-full sm:rounded-3xl flex items-center justify-center gap-2 sm:gap-3 max-w-xl w-full">
+        {/* BOTTOM FLOATING CONTROLS BAR: Modern WhatsApp/FaceTime Dock */}
+        <div className="px-2 sm:px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 flex items-center justify-center z-30 flex-shrink-0">
+          <footer className="p-2 sm:p-2.5 bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-2xl rounded-full sm:rounded-3xl flex items-center justify-center gap-1.5 sm:gap-2.5 max-w-xl w-full">
             
             {/* Microphone Toggle */}
             <button
               onClick={toggleAudio}
-              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs ${
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all shadow-xs flex-shrink-0 ${
                 audioMuted 
                   ? "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100" 
                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               }`}
               title={audioMuted ? "Unmute Microphone" : "Mute Microphone"}
             >
-              {audioMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {audioMuted ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
 
             {/* Camera Toggle */}
             <button
               onClick={toggleCamera}
-              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs ${
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all shadow-xs flex-shrink-0 ${
                 videoDisabled 
                   ? "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100" 
                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               }`}
               title={videoDisabled ? "Turn Camera On" : "Turn Camera Off"}
             >
-              {videoDisabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+              {videoDisabled ? <VideoOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Video className="w-4 h-4 sm:w-5 sm:h-5" />}
+            </button>
+
+            {/* Tap-to-Swap Viewports Button */}
+            <button
+              onClick={() => setSwappedFeeds(prev => !prev)}
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all shadow-xs flex-shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              title="Swap Big & Small Video Viewports"
+            >
+              <ArrowLeftRight className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
             </button>
 
             {/* Speaker Volume Booster (Louder Audio) */}
             <button
               onClick={cycleSpeakerBoost}
-              className={`px-3 py-3 rounded-full sm:rounded-2xl transition-all shadow-xs flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 h-10 sm:h-11 rounded-full transition-all shadow-xs flex items-center justify-center gap-1 flex-shrink-0 ${
                 speakerBoost > 100 
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold hover:bg-emerald-100 shadow-sm shadow-emerald-500/10" 
                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               }`}
               title={`Speaker Volume: ${speakerBoost}% (Click to boost louder)`}
             >
-              <Volume2 className={`w-5 h-5 ${speakerBoost > 100 ? "text-emerald-600 animate-pulse" : "text-slate-600"}`} />
-              <span className="text-[11px] font-bold">
-                {speakerBoost > 100 ? `${speakerBoost}%` : "Speaker"}
+              <Volume2 className={`w-4 h-4 sm:w-5 sm:h-5 ${speakerBoost > 100 ? "text-emerald-600 animate-pulse" : "text-slate-600"}`} />
+              <span className="text-[10px] sm:text-[11px] font-bold">
+                {speakerBoost > 100 ? `${speakerBoost}%` : "Vol"}
               </span>
             </button>
 
             {/* In-Call Chat Button */}
             <button
               onClick={() => setActiveTab(activeTab === "chat" ? null : "chat")}
-              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs relative ${
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all shadow-xs relative flex-shrink-0 ${
                 activeTab === "chat" 
                   ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25" 
                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               }`}
               title="Direct In-Call Chat"
             >
-              <MessageSquare className="w-5 h-5" />
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
               {messages.length > 0 && activeTab !== "chat" && (
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute top-1.5 right-1.5 ring-2 ring-white" />
               )}
@@ -1208,23 +1265,23 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             {/* Clinical Notes Button */}
             <button
               onClick={() => setActiveTab(activeTab === "notes" ? null : "notes")}
-              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs ${
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full hidden xs:flex items-center justify-center transition-all shadow-xs flex-shrink-0 ${
                 activeTab === "notes" 
                   ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25" 
                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               }`}
               title="Encounter Notes"
             >
-              <FileText className="w-5 h-5" />
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
             {/* End Consultation Button */}
             <button
               onClick={handleEndCall}
-              className="px-4 sm:px-5 py-3 rounded-full sm:rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all shadow-md shadow-rose-600/25 flex items-center gap-1.5 active:scale-95 ml-1"
+              className="px-3.5 sm:px-4 h-10 sm:h-11 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all shadow-md shadow-rose-600/25 flex items-center justify-center gap-1.5 active:scale-95 flex-shrink-0 ml-0.5"
             >
               <PhoneOff className="w-4 h-4" />
-              <span className="hidden sm:inline">End Call</span>
+              <span className="hidden sm:inline">End</span>
             </button>
 
           </footer>
