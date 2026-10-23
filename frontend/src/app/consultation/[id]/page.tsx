@@ -138,11 +138,28 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const [callEndedModalOpen, setCallEndedModalOpen] = useState(false);
   const [callEndedData, setCallEndedData] = useState<CallEndedData | null>(null);
 
-  // Timer Effect
+  // Refs to prevent dependency re-renders from tearing down WebRTC
+  const callDurationRef = useRef<number>(0);
+  const appointmentRef = useRef<AppointmentData | null>(null);
+  const userRoleRef = useRef<string>("PATIENT");
+
+  useEffect(() => {
+    appointmentRef.current = appointment;
+  }, [appointment]);
+
+  useEffect(() => {
+    userRoleRef.current = userRole;
+  }, [userRole]);
+
+  // Timer Effect: updates callDurationRef without causing callback re-creation
   useEffect(() => {
     if (callEndedModalOpen) return;
     const timer = setInterval(() => {
-      setCallDuration(prev => prev + 1);
+      setCallDuration(prev => {
+        const next = prev + 1;
+        callDurationRef.current = next;
+        return next;
+      });
     }, 1000);
     return () => clearInterval(timer);
   }, [callEndedModalOpen]);
@@ -194,6 +211,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
       if (res.ok) {
         const data = await res.json();
         setAppointment(data);
+        appointmentRef.current = data;
 
         // Check if appointment is already completed on server
         if (data.status === "COMPLETED" && !callEndedModalOpen) {
@@ -201,7 +219,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           setCallEndedData(prev => prev || {
             endedBy: "Doctor",
             endedByName: data.doctor_name || "Physician",
-            duration: formatTimer(callDuration),
+            duration: formatTimer(callDurationRef.current),
             reason: "This consultation encounter has been officially finalized and archived.",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           });
@@ -216,7 +234,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     } finally {
       setLoading(false);
     }
-  }, [appointmentId, callEndedModalOpen, callDuration, stopMediaTracks]);
+  }, [appointmentId, callEndedModalOpen, stopMediaTracks]);
 
   // Fetch Authentic Messages (Polls every 2s for live chat)
   const fetchMessages = useCallback(async () => {
@@ -271,12 +289,13 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         stopMediaTracks();
         
         const endedByRole = sig.payload?.endedBy === "DOCTOR" ? "Doctor" : "Patient";
-        const endedByName = sig.payload?.endedByName || (sig.payload?.endedBy === "DOCTOR" ? appointment?.doctor_name : appointment?.patient_name) || "Consultation Participant";
+        const apt = appointmentRef.current;
+        const endedByName = sig.payload?.endedByName || (sig.payload?.endedBy === "DOCTOR" ? apt?.doctor_name : apt?.patient_name) || "Consultation Participant";
 
         setCallEndedData({
           endedBy: endedByRole,
           endedByName: endedByName,
-          duration: sig.payload?.duration || formatTimer(callDuration),
+          duration: sig.payload?.duration || formatTimer(callDurationRef.current),
           reason: endedByRole === "Doctor" 
             ? "The attending physician has concluded the video consultation and recorded the clinical encounter."
             : "The patient has concluded the teleconsultation session.",
@@ -355,7 +374,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     } catch (err) {
       console.warn("Error handling incoming signal:", err);
     }
-  }, [appointment, callDuration, createAndSendOffer, sendSignal, stopMediaTracks]);
+  }, [createAndSendOffer, sendSignal, stopMediaTracks]);
 
   // Initialize WebRTC Peer Connection
   const initPeerConnection = useCallback((localStream: MediaStream) => {
@@ -502,17 +521,34 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   };
 
-  // Main Camera & Peer Lifecycle
+  // Main Camera & Peer Lifecycle: Runs ONCE per consultation mount
   useEffect(() => {
     let isMounted = true;
 
     async function startMedia() {
+      let stream: MediaStream;
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, 
-            audio: true 
-          });
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, 
+              audio: true 
+            });
+            setHasCameraAccess(true);
+          } catch (camErr) {
+            console.warn("Full video+audio getUserMedia failed, trying audio-only fallback:", camErr);
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              setHasCameraAccess(false);
+              setVideoDisabled(true);
+              toast.info("Webcam busy or unavailable, streaming encrypted audio");
+            } catch (audioErr) {
+              console.warn("Audio getUserMedia failed, initializing stream container:", audioErr);
+              stream = new MediaStream();
+              setHasCameraAccess(false);
+              setVideoDisabled(true);
+            }
+          }
 
           if (!isMounted) {
             stream.getTracks().forEach(t => t.stop());
@@ -520,11 +556,10 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           }
 
           streamRef.current = stream;
-          if (localVideoRef.current) {
+          if (localVideoRef.current && stream.getVideoTracks().length > 0) {
             localVideoRef.current.srcObject = stream;
             localVideoRef.current.play().catch(() => {});
           }
-          setHasCameraAccess(true);
 
           initPeerConnection(stream);
           await sendSignal("join", { timestamp: Date.now() });
@@ -550,9 +585,10 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
       isMounted = false;
       stopMediaTracks();
     };
-  }, [initPeerConnection, sendSignal, createAndSendOffer, stopMediaTracks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appointmentId]);
 
-  // Polling Loops (Messages & Signaling)
+  // Polling Loops (Messages & Signaling): Runs ONCE per consultation mount
   useEffect(() => {
     const role = typeof window !== "undefined" ? (localStorage.getItem("user_role") || "PATIENT").toUpperCase() : "PATIENT";
     setUserRole(role);
@@ -566,7 +602,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
       clearInterval(signalInterval);
       clearInterval(msgInterval);
     };
-  }, [fetchAppointmentDetails, fetchMessages, pollSignals]);
+  }, [appointmentId, fetchAppointmentDetails, fetchMessages, pollSignals]);
 
   // Keep local video playing when re-enabled
   useEffect(() => {
