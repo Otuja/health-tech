@@ -76,22 +76,19 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
     { urls: "stun:stun.cloudflare.com:3478" },
-    { urls: "stun:openrelay.metered.ca:80" },
+    { urls: "stun:relay.metered.ca:80" },
     {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelay",
-      credential: "openrelay",
+      urls: "turn:relay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
     },
     {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelay",
-      credential: "openrelay",
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelay",
-      credential: "openrelay",
+      urls: "turn:relay.metered.ca:80?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
     },
   ],
   iceCandidatePoolSize: 10,
@@ -123,12 +120,16 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const [hasCameraAccess, setHasCameraAccess] = useState<boolean | null>(null);
 
   // WebRTC Peer Connection State
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const queuedCandidates = useRef<RTCIceCandidateInit[]>([]);
+  const pendingSignalsQueue = useRef<SignalItem[]>([]);
   const lastSignalIdRef = useRef<number>(0);
+  const sessionIdRef = useRef<string>(Math.random().toString(36).substring(2, 10));
+  const makingOfferRef = useRef<boolean>(false);
   const [remoteStreamActive, setRemoteStreamActive] = useState(false);
   const [peerState, setPeerState] = useState<string>("initializing");
   const [audioNeedsUnlock, setAudioNeedsUnlock] = useState(false);
@@ -168,10 +169,18 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   // Transmit WebRTC signaling data through backend
   const sendSignal = useCallback(async (type: string, payload: any = {}) => {
     try {
+      const currentRole = typeof window !== "undefined" ? (localStorage.getItem("user_role") || "PATIENT").toUpperCase() : "PATIENT";
       await authFetch(`/api/appointments/appointments/${appointmentId}/signal/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, payload })
+        body: JSON.stringify({ 
+          type, 
+          payload: {
+            ...payload,
+            sessionId: sessionIdRef.current,
+            senderRole: currentRole
+          }
+        })
       });
     } catch (err) {
       console.warn("Signal send failed:", err);
@@ -222,97 +231,26 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [appointmentId]);
 
-  const makingOfferRef = useRef<boolean>(false);
-
-  // Initialize WebRTC Peer Connection
-  const initPeerConnection = useCallback((localStream: MediaStream) => {
-    if (peerRef.current) {
-      peerRef.current.close();
-      peerRef.current = null;
-    }
-
-    const pc = new RTCPeerConnection(RTC_CONFIG);
-    peerRef.current = pc;
-
-    // Attach local audio/video tracks to peer connection
-    localStream.getTracks().forEach((track) => {
-      pc.addTrack(track, localStream);
-    });
-
-    // Handle incoming remote media tracks from other device (supports mobile streams & individual tracks)
-    pc.ontrack = (event) => {
-      let targetStream: MediaStream;
-      if (event.streams && event.streams[0]) {
-        targetStream = event.streams[0];
-      } else {
-        const existing = remoteVideoRef.current?.srcObject as MediaStream;
-        targetStream = existing || new MediaStream();
-        targetStream.addTrack(event.track);
-      }
-
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = targetStream;
-        remoteVideoRef.current.play().catch(() => {
-          setAudioNeedsUnlock(true);
-        });
-      }
-      setRemoteStreamActive(true);
-    };
-
-    // Batch ICE candidates to prevent flooding mobile networks
-    let iceTimeout: any = null;
-    let pendingIceList: any[] = [];
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        pendingIceList.push(event.candidate.toJSON());
-        clearTimeout(iceTimeout);
-        iceTimeout = setTimeout(() => {
-          if (pendingIceList.length > 0) {
-            sendSignal("ice-candidate-batch", pendingIceList);
-            pendingIceList = [];
-          }
-        }, 120);
-      }
-    };
-
-    // Track connection state
-    pc.onconnectionstatechange = () => {
-      setPeerState(pc.connectionState);
-      if (pc.connectionState === "connected") {
-        setRemoteStreamActive(true);
-      } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
-        setRemoteStreamActive(false);
-        if (pc.connectionState === "failed") {
-          pc.restartIce?.();
-        }
-      }
-    };
-
-    pc.oniceconnectionstatechange = () => {
-      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
-        setRemoteStreamActive(true);
-      }
-    };
-
-    return pc;
-  }, [sendSignal]);
-
   // Initiate an offer with in-flight guard to prevent glare
   const createAndSendOffer = useCallback(async () => {
     const pc = peerRef.current;
     if (!pc || makingOfferRef.current) return;
-    if (pc.signalingState !== "stable") return;
 
     try {
       makingOfferRef.current = true;
+      if (pc.signalingState !== "stable") {
+        try {
+          await pc.setLocalDescription({ type: "rollback" } as any);
+        } catch (e) {
+          console.warn("Rollback failed:", e);
+        }
+      }
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
       });
-      if (pc.signalingState !== "stable") return;
       await pc.setLocalDescription(offer);
-      await sendSignal("offer", offer);
+      await sendSignal("offer", { sdp: offer });
     } catch (err) {
       console.warn("Failed creating offer:", err);
     } finally {
@@ -320,30 +258,14 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [sendSignal]);
 
-  // Reconnection Helper
-  const handleReconnect = useCallback(async () => {
-    toast.loading("Reconnecting P2P video stream...", { id: "reconnect-call" });
-    try {
-      await sendSignal("reset");
-      lastSignalIdRef.current = 0;
-      queuedCandidates.current = [];
-      if (streamRef.current) {
-        initPeerConnection(streamRef.current);
-        await sendSignal("join", { timestamp: Date.now() });
-        const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
-        if (currentRole === "DOCTOR") {
-          setTimeout(createAndSendOffer, 900);
-        }
-      }
-      toast.success("Stream re-initialized", { id: "reconnect-call" });
-    } catch {
-      toast.error("Failed to re-initialize stream", { id: "reconnect-call" });
-    }
-  }, [sendSignal, initPeerConnection, createAndSendOffer]);
-
   // Handle incoming signaling messages from other device
   const handleSignal = useCallback(async (sig: SignalItem) => {
     try {
+      // Discard signals originating from this exact browser session
+      if (sig.payload?.sessionId && sig.payload.sessionId === sessionIdRef.current) {
+        return;
+      }
+
       // 1. CALL ENDED SIGNAL (Either party concluded the encounter)
       if (sig.type === "call_ended") {
         stopMediaTracks();
@@ -366,14 +288,23 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
       }
 
       const pc = peerRef.current;
-      if (!pc) return;
+      if (!pc) {
+        // Queue until peer connection is initialized
+        pendingSignalsQueue.current.push(sig);
+        return;
+      }
 
-      if (sig.type === "join") {
-        const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
-        if (currentRole === "DOCTOR" && pc.signalingState === "stable") {
+      const currentRole = typeof window !== "undefined" ? (localStorage.getItem("user_role") || "PATIENT").toUpperCase() : "PATIENT";
+
+      if (sig.type === "join" || sig.type === "reconnect") {
+        // When peer joins or reconnects, Doctor immediately initiates an offer
+        if (currentRole === "DOCTOR") {
           await createAndSendOffer();
         }
       } else if (sig.type === "offer") {
+        const offerSdp = sig.payload?.sdp || sig.payload;
+        if (!offerSdp || !offerSdp.type) return;
+
         if (pc.signalingState !== "stable") {
           try {
             await pc.setLocalDescription({ type: "rollback" } as any);
@@ -381,7 +312,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             // continue
           }
         }
-        await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+        await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
         
         while (queuedCandidates.current.length > 0) {
           const candidate = queuedCandidates.current.shift();
@@ -392,10 +323,13 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        await sendSignal("answer", answer);
+        await sendSignal("answer", { sdp: answer });
       } else if (sig.type === "answer") {
+        const answerSdp = sig.payload?.sdp || sig.payload;
+        if (!answerSdp || !answerSdp.type) return;
+
         if (pc.signalingState === "have-local-offer") {
-          await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
+          await pc.setRemoteDescription(new RTCSessionDescription(answerSdp));
           
           while (queuedCandidates.current.length > 0) {
             const candidate = queuedCandidates.current.shift();
@@ -405,9 +339,9 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           }
         }
       } else if (sig.type === "ice-candidate-batch" || sig.type === "ice-candidate") {
-        const candidates = sig.type === "ice-candidate-batch" && Array.isArray(sig.payload) 
-          ? sig.payload 
-          : [sig.payload];
+        const candidates = sig.type === "ice-candidate-batch" 
+          ? (Array.isArray(sig.payload?.candidates) ? sig.payload.candidates : (Array.isArray(sig.payload) ? sig.payload : []))
+          : [sig.payload?.candidate || sig.payload];
 
         for (const cand of candidates) {
           if (!cand) continue;
@@ -423,6 +357,119 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [appointment, callDuration, createAndSendOffer, sendSignal, stopMediaTracks]);
 
+  // Initialize WebRTC Peer Connection
+  const initPeerConnection = useCallback((localStream: MediaStream) => {
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
+
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    peerRef.current = pc;
+
+    // Attach local audio/video tracks to peer connection
+    localStream.getTracks().forEach((track) => {
+      pc.addTrack(track, localStream);
+    });
+
+    // Handle incoming remote media tracks from other device
+    pc.ontrack = (event) => {
+      console.log("Remote WebRTC track received:", event.track.kind, event.streams);
+      let targetStream = event.streams && event.streams[0];
+      if (!targetStream) {
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = new MediaStream();
+        }
+        if (!remoteStreamRef.current.getTracks().some(t => t.id === event.track.id)) {
+          remoteStreamRef.current.addTrack(event.track);
+        }
+        targetStream = remoteStreamRef.current;
+      } else {
+        remoteStreamRef.current = targetStream;
+      }
+
+      if (remoteVideoRef.current) {
+        if (remoteVideoRef.current.srcObject !== targetStream) {
+          remoteVideoRef.current.srcObject = targetStream;
+        }
+        remoteVideoRef.current.play().then(() => {
+          setAudioNeedsUnlock(false);
+        }).catch((err) => {
+          console.warn("Remote video play deferred by browser autoplay policy:", err);
+          setAudioNeedsUnlock(true);
+        });
+      }
+      setRemoteStreamActive(true);
+    };
+
+    // Batch ICE candidates
+    let iceTimeout: any = null;
+    let pendingIceList: any[] = [];
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        pendingIceList.push(event.candidate.toJSON());
+        clearTimeout(iceTimeout);
+        iceTimeout = setTimeout(() => {
+          if (pendingIceList.length > 0) {
+            sendSignal("ice-candidate-batch", { candidates: pendingIceList });
+            pendingIceList = [];
+          }
+        }, 50);
+      }
+    };
+
+    // Track connection state
+    pc.onconnectionstatechange = () => {
+      setPeerState(pc.connectionState);
+      if (pc.connectionState === "connected") {
+        setRemoteStreamActive(true);
+      } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
+        if (pc.connectionState === "failed") {
+          pc.restartIce?.();
+        }
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        setRemoteStreamActive(true);
+      }
+    };
+
+    // Drain queued signals that arrived while camera was initializing
+    while (pendingSignalsQueue.current.length > 0) {
+      const pendingSig = pendingSignalsQueue.current.shift();
+      if (pendingSig) {
+        handleSignal(pendingSig).catch(console.warn);
+      }
+    }
+
+    return pc;
+  }, [sendSignal, handleSignal]);
+
+  // Reconnection Helper
+  const handleReconnect = useCallback(async () => {
+    toast.loading("Reconnecting P2P video stream...", { id: "reconnect-call" });
+    try {
+      sessionIdRef.current = Math.random().toString(36).substring(2, 10);
+      queuedCandidates.current = [];
+      pendingSignalsQueue.current = [];
+      
+      if (streamRef.current) {
+        initPeerConnection(streamRef.current);
+        await sendSignal("reconnect", { timestamp: Date.now() });
+        const currentRole = typeof window !== "undefined" ? (localStorage.getItem("user_role") || "PATIENT").toUpperCase() : "PATIENT";
+        if (currentRole === "DOCTOR") {
+          setTimeout(createAndSendOffer, 600);
+        }
+      }
+      toast.success("Stream re-negotiated", { id: "reconnect-call" });
+    } catch {
+      toast.error("Failed to re-initialize stream", { id: "reconnect-call" });
+    }
+  }, [sendSignal, initPeerConnection, createAndSendOffer]);
+
   // Poll for new signals
   const pollSignals = useCallback(async () => {
     if (callEndedModalOpen) return;
@@ -433,7 +480,11 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         for (const sig of signals) {
           if (sig.id > lastSignalIdRef.current) {
             lastSignalIdRef.current = sig.id;
-            await handleSignal(sig);
+            if (!peerRef.current) {
+              pendingSignalsQueue.current.push(sig);
+            } else {
+              await handleSignal(sig);
+            }
           }
         }
       }
@@ -478,11 +529,11 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           initPeerConnection(stream);
           await sendSignal("join", { timestamp: Date.now() });
 
-          const currentRole = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
+          const currentRole = typeof window !== "undefined" ? (localStorage.getItem("user_role") || "PATIENT").toUpperCase() : "PATIENT";
           if (currentRole === "DOCTOR") {
             setTimeout(() => {
               createAndSendOffer();
-            }, 1200);
+            }, 800);
           }
         } else {
           setHasCameraAccess(false);
@@ -503,12 +554,12 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
   // Polling Loops (Messages & Signaling)
   useEffect(() => {
-    const role = typeof window !== "undefined" ? localStorage.getItem("user_role") || "PATIENT" : "PATIENT";
+    const role = typeof window !== "undefined" ? (localStorage.getItem("user_role") || "PATIENT").toUpperCase() : "PATIENT";
     setUserRole(role);
     fetchAppointmentDetails();
     fetchMessages();
 
-    const signalInterval = setInterval(pollSignals, 1500);
+    const signalInterval = setInterval(pollSignals, 1000);
     const msgInterval = setInterval(fetchMessages, 2000);
 
     return () => {
