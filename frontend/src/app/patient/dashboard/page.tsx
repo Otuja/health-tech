@@ -29,6 +29,7 @@ interface AppointmentItem {
   notes?: string;
   slot_start_time?: string;
   slot_end_time?: string;
+  status?: string;
   created_at?: string;
 }
 
@@ -85,9 +86,24 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Auto-refresh every 3 seconds for instant updates
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 3000);
+
+    const onSync = () => fetchDashboardData();
+    window.addEventListener("focus", onSync);
+    document.addEventListener("visibilitychange", onSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onSync);
+      document.removeEventListener("visibilitychange", onSync);
+    };
   }, [fetchDashboardData]);
 
-  const nextAppointment = appointments.length > 0 ? appointments[0] : null;
+  const nextAppointment = appointments.find(a => a.status === "SCHEDULED" || a.status === "IN_PROGRESS") || null;
 
   return (
     <motion.div 

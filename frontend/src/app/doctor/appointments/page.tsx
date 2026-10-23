@@ -76,10 +76,10 @@ export default function DoctorAppointments() {
   useEffect(() => {
     fetchData(true);
 
-    // Auto-refresh every 5 seconds so when a patient books a slot, it updates immediately
+    // Auto-refresh every 3 seconds so when a patient books a slot, it updates immediately
     const interval = setInterval(() => {
       fetchData(false);
-    }, 5000);
+    }, 3000);
 
     const onSync = () => fetchData(false);
     window.addEventListener("focus", onSync);
@@ -238,24 +238,33 @@ export default function DoctorAppointments() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 self-start sm:self-center">
-                        <Link
-                          href={`/consultation/${appt.id}`}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
-                        >
-                          <Video className="w-3.5 h-3.5" />
-                          <span>Join Video Call</span>
-                        </Link>
-                        {appt.status !== "COMPLETED" && (
-                          <button
-                            onClick={() => handleUpdateStatus(appt.id, "COMPLETED")}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-semibold text-xs border border-slate-200 transition-colors"
-                          >
+                      <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                        {appt.status !== "COMPLETED" ? (
+                          <>
+                            <Link
+                              href={`/consultation/${appt.id}`}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              <span>Join Video Call</span>
+                            </Link>
+                            <button
+                              onClick={() => handleUpdateStatus(appt.id, "COMPLETED")}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-semibold text-xs border border-slate-200 transition-colors"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Mark Completed</span>
+                            </button>
+                          </>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 font-semibold text-xs border border-slate-200">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Mark Completed</span>
-                          </button>
+                            <span>Consultation Concluded</span>
+                          </span>
                         )}
-                        <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                          appt.status === "COMPLETED" ? "bg-slate-100 text-slate-500" : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        }`}>
                           {appt.status || "SCHEDULED"}
                         </span>
                       </div>

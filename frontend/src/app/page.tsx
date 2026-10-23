@@ -25,16 +25,16 @@ import {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white overflow-x-hidden w-full">
       {/* TOP NOTIFICATION BAR */}
-      <div className="bg-emerald-950 text-emerald-200 text-xs py-2 px-4 text-center font-medium border-b border-emerald-900/60 flex items-center justify-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+      <div className="bg-emerald-950 text-emerald-200 text-[11px] sm:text-xs py-2 px-3 sm:px-4 text-center font-medium border-b border-emerald-900/60 flex items-center justify-center gap-1.5 sm:gap-2 leading-tight">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
         <span>NDPR Certified Healthcare Cloud • 24/7 First Responder & Paramedic Emergency Pass Integration</span>
       </div>
 
       {/* HEADER / NAVIGATION */}
       <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 group-hover:scale-105 transition-transform">
               <HeartPulse className="w-6 h-6" />
@@ -60,27 +60,27 @@ export default function Home() {
             <a href="#doctors" className="hover:text-emerald-600 transition-colors">Our Clinicians</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <Link 
               href="/login" 
-              className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-emerald-700 px-3.5 py-2 transition-colors rounded-xl hover:bg-emerald-50"
+              className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-emerald-700 px-2.5 sm:px-3.5 py-1.5 sm:py-2 transition-colors rounded-xl hover:bg-emerald-50"
             >
               Sign In
             </Link>
             <Link 
               href="/register" 
-              className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold py-2.5 px-5 rounded-xl hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/25 flex items-center gap-1.5 hover:gap-2"
+              className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold py-2 sm:py-2.5 px-3.5 sm:px-5 rounded-xl hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/25 flex items-center gap-1 sm:gap-1.5"
             >
               <span>Get Started</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Link>
           </div>
         </div>
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative pt-12 pb-24 overflow-hidden bg-gradient-to-b from-emerald-50/70 via-slate-50 to-white">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative pt-6 sm:pt-12 pb-14 sm:pb-24 overflow-hidden bg-gradient-to-b from-emerald-50/70 via-slate-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
             
             {/* Left Content Column */}
@@ -90,19 +90,19 @@ export default function Home() {
                 <span>Next-Generation Unified Clinical Telemedicine</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-heading font-extrabold text-slate-950 tracking-tight leading-[1.1]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-heading font-extrabold text-slate-950 tracking-tight leading-[1.15] sm:leading-[1.1]">
                 Empowering Life Through <span className="text-emerald-600 underline decoration-emerald-300 decoration-wavy decoration-2">Compassionate</span> Digital Healthcare.
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-600 max-w-xl leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg text-slate-600 max-w-xl leading-relaxed">
                 Connect directly with certified specialists, manage your unified Electronic Health Records (EHR), and protect your loved ones with an instant first-responder Emergency QR vitals pass.
               </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Link 
                   href="/login" 
-                  className="bg-emerald-600 text-white text-sm font-bold py-3.5 px-8 rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2 hover:scale-[1.02]"
+                  className="bg-emerald-600 text-white text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-8 rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 hover:scale-[1.02] text-center"
                 >
                   <Calendar className="w-4 h-4" />
                   <span>Book Doctor Appointment</span>
@@ -110,7 +110,7 @@ export default function Home() {
 
                 <Link 
                   href="/register" 
-                  className="bg-white text-slate-800 border border-slate-300 text-sm font-bold py-3.5 px-7 rounded-2xl hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                  className="bg-white text-slate-800 border border-slate-300 text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-7 rounded-2xl hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2 text-center"
                 >
                   <FileText className="w-4 h-4 text-emerald-600" />
                   <span>Upload EHR & Records</span>
@@ -118,18 +118,18 @@ export default function Home() {
               </div>
 
               {/* Clinical Trust & Compliance Badges */}
-              <div className="pt-8 border-t border-slate-200/90 grid grid-cols-3 gap-4 text-left max-w-lg">
+              <div className="pt-6 sm:pt-8 border-t border-slate-200/90 grid grid-cols-3 gap-2 sm:gap-4 text-left max-w-lg">
                 <div>
-                  <div className="text-2xl font-black text-slate-900 font-heading">100%</div>
-                  <div className="text-xs text-slate-500 font-medium mt-0.5">NDPR Data Privacy</div>
+                  <div className="text-xl sm:text-2xl font-black text-slate-900 font-heading">100%</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">NDPR Data Privacy</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-emerald-600 font-heading">&lt; 3 Sec</div>
-                  <div className="text-xs text-slate-500 font-medium mt-0.5">Emergency QR Scan</div>
+                  <div className="text-xl sm:text-2xl font-black text-emerald-600 font-heading">&lt; 3 Sec</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">Emergency QR Scan</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-slate-900 font-heading">24/7</div>
-                  <div className="text-xs text-slate-500 font-medium mt-0.5">Telehealth Coverage</div>
+                  <div className="text-xl sm:text-2xl font-black text-slate-900 font-heading">24/7</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">Telehealth Coverage</div>
                 </div>
               </div>
             </div>
@@ -146,17 +146,17 @@ export default function Home() {
                 />
                 
                 {/* Floating Vitals Badge */}
-                <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-emerald-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                      <Stethoscope className="w-6 h-6" />
+                <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-6 sm:right-6 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl shadow-xl border border-emerald-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold flex-shrink-0">
+                      <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">Dr. Sarah Connor, MD</p>
-                      <p className="text-[11px] text-emerald-700 font-semibold">Consultant Cardiologist • Active Now</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">Dr. Sarah Connor, MD</p>
+                      <p className="text-[10px] sm:text-[11px] text-emerald-700 font-semibold truncate">Consultant Cardiologist • Active</p>
                     </div>
                   </div>
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 animate-ping flex-shrink-0 ml-2" />
                 </div>
               </div>
 
@@ -169,24 +169,24 @@ export default function Home() {
       </section>
 
       {/* CORE CAPABILITIES SECTION */}
-      <section id="services" className="py-20 bg-white border-y border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+      <section id="services" className="py-14 sm:py-20 bg-white border-y border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
             <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
               Complete Healthcare Platform
             </span>
-            <h2 className="text-3xl sm:text-4xl font-heading font-extrabold text-slate-900 tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-4xl font-heading font-extrabold text-slate-900 tracking-tight mt-3">
               Designed For Life, Built For Healthcare Precision
             </h2>
-            <p className="text-sm text-slate-600 mt-2">
+            <p className="text-xs sm:text-sm text-slate-600 mt-2">
               From appointment scheduling and electronic medical records to instant first-responder triage, HealthTech unifies your medical journey.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             
             {/* Feature 1: Clinical Telehealth */}
-            <div className="bg-slate-50 hover:bg-emerald-50/40 p-8 rounded-3xl border border-slate-200/90 transition-all hover:shadow-lg hover:border-emerald-200 flex flex-col justify-between group">
+            <div className="bg-slate-50 hover:bg-emerald-50/40 p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/90 transition-all hover:shadow-lg hover:border-emerald-200 flex flex-col justify-between group">
               <div>
                 <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/20 mb-6 group-hover:scale-110 transition-transform">
                   <Stethoscope className="w-7 h-7" />
@@ -257,13 +257,13 @@ export default function Home() {
       </section>
 
       {/* EMERGENCY & FIRST RESPONDER SHOWCASE */}
-      <section id="emergency" className="py-24 bg-slate-950 text-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
+      <section id="emergency" className="py-16 sm:py-24 bg-slate-950 text-white relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+          <div className="grid lg:grid-cols-12 gap-8 sm:gap-12 items-center">
             
             {/* Left Image Column */}
             <div className="lg:col-span-6 relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-800 aspect-[16/10]">
+              <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 aspect-[16/10]">
                 <Image 
                   src="/images/emergency_hero_green.jpg" 
                   alt="Paramedics using Emergency Pass" 
@@ -271,12 +271,12 @@ export default function Home() {
                   className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4 bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
+                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-slate-900/90 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-red-400 block">Critical Emergency Action</span>
-                    <span className="font-semibold text-slate-200">NDPR Section 2.1 Vital Interests Exemption</span>
+                    <span className="font-semibold text-slate-200 text-[11px] sm:text-xs">NDPR Section 2.1 Vital Interests Exemption</span>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-bold">Live Rescue</span>
+                  <span className="px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex-shrink-0 ml-2">Live Rescue</span>
                 </div>
               </div>
             </div>
@@ -324,23 +324,23 @@ export default function Home() {
       </section>
 
       {/* PATIENT EHR & CLINICAL CARE SECTION */}
-      <section id="ehr" className="py-24 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
+      <section id="ehr" className="py-16 sm:py-24 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid lg:grid-cols-12 gap-8 sm:gap-12 items-center">
             
             {/* Left Text */}
             <div className="lg:col-span-6 space-y-6">
               <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
                 Patient Electronic Health Record (EHR)
               </span>
-              <h2 className="text-3xl sm:text-4xl font-heading font-extrabold text-slate-950 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-heading font-extrabold text-slate-950 tracking-tight">
                 Your Complete Medical Biography in One Secure Vault.
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 No more lost paper files, forgotten prescriptions, or repeating blood tests across different clinics. Easily upload lab sheets, diagnostic imaging reports, and vaccination certificates.
               </p>
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
                   <h4 className="font-bold text-slate-900 text-sm">Laboratory Results</h4>
                   <p className="text-xs text-slate-500 mt-1">Full Blood Count, lipid profiles, HbA1c, and metabolic screenings.</p>
@@ -387,14 +387,14 @@ export default function Home() {
       </section>
 
       {/* MEET OUR CLINICIANS */}
-      <section id="doctors" className="py-20 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+      <section id="doctors" className="py-14 sm:py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12 gap-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-200">
                 Accredited Medical Faculty
               </span>
-              <h2 className="text-3xl font-heading font-extrabold text-slate-900 tracking-tight mt-2">
+              <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-slate-900 tracking-tight mt-2">
                 Certified Doctors Ready To Care For You
               </h2>
             </div>
@@ -407,7 +407,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             
             {/* Doctor 1 */}
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
@@ -498,8 +498,8 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-slate-950 text-white py-14 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
+      <footer className="bg-slate-950 text-white py-10 sm:py-14 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10">
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">

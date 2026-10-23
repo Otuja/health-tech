@@ -68,7 +68,7 @@ export default function Register() {
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white/95 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-slate-200/80 z-10 my-4"
+        className="w-full max-w-md bg-white/95 backdrop-blur-2xl p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200/80 z-10 my-4"
       >
         <div className="text-center mb-6">
           <Link href="/" className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 mb-3 hover:scale-105 transition-transform shadow-sm">

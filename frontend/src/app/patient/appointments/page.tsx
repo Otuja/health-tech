@@ -74,6 +74,21 @@ export default function AppointmentBooking() {
 
   useEffect(() => {
     fetchSlots();
+
+    // Auto-refresh every 3s so when doctor publishes slots or appointment updates, it refreshes automatically
+    const interval = setInterval(() => {
+      fetchSlots();
+    }, 3000);
+
+    const onSync = () => fetchSlots();
+    window.addEventListener("focus", onSync);
+    document.addEventListener("visibilitychange", onSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onSync);
+      document.removeEventListener("visibilitychange", onSync);
+    };
   }, [fetchSlots]);
 
   const handleConfirmBooking = async () => {
@@ -328,7 +343,20 @@ export default function AppointmentBooking() {
                     </div>
 
                     <div className="flex flex-col gap-2 w-full sm:w-auto">
-                      {appt.status !== "CANCELLED" ? (
+                      {appt.status === "COMPLETED" ? (
+                        <>
+                          <span className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 text-slate-500 font-semibold text-xs border border-slate-200">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <span>Encounter Completed</span>
+                          </span>
+                          <Link
+                            href="/patient/records"
+                            className="inline-flex items-center justify-center gap-1 px-3 py-1 text-[11px] text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors font-semibold"
+                          >
+                            View Medical Summary &rarr;
+                          </Link>
+                        </>
+                      ) : appt.status !== "CANCELLED" ? (
                         <>
                           <Link
                             href={`/consultation/${appt.id}`}
@@ -337,15 +365,13 @@ export default function AppointmentBooking() {
                             <Video className="w-4 h-4" />
                             <span>Join Video Call</span>
                           </Link>
-                          {appt.status !== "COMPLETED" && (
-                            <button
-                              onClick={() => handleCancelAppointment(appt.id)}
-                              className="inline-flex items-center justify-center gap-1 px-3 py-1 text-[11px] text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Cancel Visit</span>
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleCancelAppointment(appt.id)}
+                            className="inline-flex items-center justify-center gap-1 px-3 py-1 text-[11px] text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Cancel Visit</span>
+                          </button>
                         </>
                       ) : (
                         <span className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-600 text-xs font-semibold text-center">

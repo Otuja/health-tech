@@ -106,10 +106,10 @@ export default function DoctorDashboard() {
   useEffect(() => {
     fetchDoctorDashboardData();
 
-    // Auto-refresh every 5 seconds so newly booked slots update immediately without reload
+    // Auto-refresh every 3 seconds so newly booked slots update immediately without reload
     const interval = setInterval(() => {
       fetchDoctorDashboardData();
-    }, 5000);
+    }, 3000);
 
     const onSync = () => fetchDoctorDashboardData();
     window.addEventListener("focus", onSync);

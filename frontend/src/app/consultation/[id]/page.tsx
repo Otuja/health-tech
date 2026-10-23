@@ -109,7 +109,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const [audioMuted, setAudioMuted] = useState(false);
   const [videoDisabled, setVideoDisabled] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
-  const [activeTab, setActiveTab] = useState<"chat" | "notes" | null>("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "notes" | null>(null);
 
   // Messages State (Direct Doctor & Patient Messaging)
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -311,6 +311,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             : "The patient has concluded the teleconsultation session.",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
+        setAppointment(prev => prev ? { ...prev, status: "COMPLETED" } : null);
         setCallEndedModalOpen(true);
         toast.info(`Call ended by ${endedByName}`);
         return;
@@ -594,6 +595,9 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     let isMounted = true;
 
     async function startMedia() {
+      if (appointmentRef.current?.status === "COMPLETED") {
+        return;
+      }
       let stream: MediaStream;
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -763,26 +767,28 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     await sendSignal("call_ended", {
       endedBy: userRole,
       endedByName: selfName,
-      duration: durationStr
+      duration: durationStr,
+      status: "COMPLETED"
     });
 
-    // 2. If Doctor, mark appointment COMPLETED in database
-    if (userRole === "DOCTOR") {
-      try {
-        await authFetch(`/api/appointments/appointments/${appointmentId}/status/`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "COMPLETED" })
-        });
-      } catch {
-        // silent catch
-      }
+    // 2. Mark appointment COMPLETED in database
+    try {
+      await authFetch(`/api/appointments/appointments/${appointmentId}/status/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "COMPLETED" })
+      });
+    } catch {
+      // silent catch
     }
 
     // 3. Stop camera and microphone hardware tracks
     stopMediaTracks();
 
-    // 4. Open summary modal on initiator device
+    // 4. Update appointment state to COMPLETED so it locks immediately
+    setAppointment(prev => prev ? { ...prev, status: "COMPLETED" } : null);
+
+    // 5. Open summary modal on initiator device
     setCallEndedData({
       endedBy: "You",
       endedByName: selfName,
@@ -815,7 +821,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             Consultation Encounter Not Found
           </h2>
           <p className="text-sm text-slate-400 max-w-md mt-2 leading-relaxed">
-            Consultation #{appointmentId} was not found, has already been completed, or is not assigned to your account.
+            Consultation #{appointmentId} was not found or is not assigned to your account.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
             <Link
@@ -829,6 +835,62 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
               className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-colors border border-slate-700"
             >
               Return to Dashboard
+            </Link>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
+  // Encounter Completed & Locked View (Cannot be accessed once call has ended)
+  if (appointment?.status === "COMPLETED" && !loading) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 shadow-2xl">
+            <CheckCircle2 className="w-9 h-9" />
+          </div>
+          <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+            Status: Completed & Concluded
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-bold font-heading text-white">
+            Consultation Concluded
+          </h2>
+          <p className="text-sm text-slate-400 max-w-md mt-2.5 leading-relaxed">
+            This teleconsultation encounter has been completed and finalized. The secure video room is closed and cannot be re-entered.
+          </p>
+
+          <div className="mt-6 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left max-w-sm w-full space-y-2 text-xs">
+            <div className="flex justify-between text-slate-400">
+              <span>Patient:</span>
+              <span className="font-semibold text-slate-200">{appointment.patient_name || "Patient"}</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
+              <span>Clinician:</span>
+              <span className="font-semibold text-slate-200">{appointment.doctor_name || "Physician"}</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
+              <span>Specialty:</span>
+              <span className="font-semibold text-slate-200">{appointment.doctor_specialization || "Telehealth"}</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
+              <span>Encounter ID:</span>
+              <span className="font-mono text-emerald-400">#{appointment.id}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+            <Link
+              href={userRole === "DOCTOR" ? "/doctor/dashboard" : "/patient/dashboard"}
+              className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-lg shadow-emerald-600/25"
+            >
+              Return to Dashboard
+            </Link>
+            <Link
+              href={userRole === "DOCTOR" ? "/doctor/records" : "/patient/records"}
+              className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-colors border border-slate-700"
+            >
+              View Clinical Records & Notes
             </Link>
           </div>
         </div>
