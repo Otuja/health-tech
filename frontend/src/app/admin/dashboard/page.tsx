@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { toast } from "sonner";
-import { authFetch } from "@/lib/api";
+import { authFetch, API_BASE } from "@/lib/api";
 import { 
   Users, 
   Stethoscope, 
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
 
         <div className="flex items-center gap-3">
           <a
-            href="http://localhost:8000/admin/"
+            href={`${API_BASE}/admin/`}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-sm"

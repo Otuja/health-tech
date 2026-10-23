@@ -39,9 +39,11 @@ interface EmergencyData {
   updated_at?: string;
 }
 
+import { API_BASE } from "@/lib/api";
+
 async function getEmergencyData(uuid: string): Promise<EmergencyData | null> {
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/records/emergency-scan/${uuid}/`, {
+    const res = await fetch(`${API_BASE}/api/records/emergency-scan/${uuid}/`, {
       cache: "no-store",
     });
     if (!res.ok) return null;

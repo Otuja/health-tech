@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { clearAuth } from "@/lib/api";
+import { clearAuth, API_BASE } from "@/lib/api";
 import { 
   LayoutDashboard, 
   UserCheck, 
@@ -96,7 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             })}
 
             <a
-              href="http://localhost:8000/admin/"
+              href={`${API_BASE}/admin/`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center justify-between px-4 py-2.5 rounded-xl font-semibold text-xs text-amber-300 hover:bg-amber-950/40 border border-amber-500/20"
@@ -165,7 +165,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   System Consoles
                 </p>
                 <a
-                  href="http://localhost:8000/admin/"
+                  href={`${API_BASE}/admin/`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs text-amber-300 hover:bg-amber-950/40 border border-amber-500/20 group transition-all"

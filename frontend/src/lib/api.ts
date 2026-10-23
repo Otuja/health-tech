@@ -1,21 +1,25 @@
 import { toast } from "sonner";
 
+const PROD_API_URL = "https://healthtech-backend-9xpb.onrender.com";
+
 export const getApiBase = (): string => {
   if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
   }
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
-    if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "http://localhost:8000";
+    }
+    // Local LAN IP for mobile dev testing
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
       return `http://${hostname}:8000`;
     }
   }
-  return "http://localhost:8000";
+  return PROD_API_URL;
 };
 
-export const API_BASE = typeof window !== "undefined"
-  ? (process.env.NEXT_PUBLIC_API_URL || (window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" ? `http://${window.location.hostname}:8000` : "http://localhost:8000"))
-  : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000");
+export const API_BASE = getApiBase();
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];

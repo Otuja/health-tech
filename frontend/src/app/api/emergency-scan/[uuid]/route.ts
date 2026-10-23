@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { API_BASE } from "@/lib/api";
 
 export async function GET(
   request: Request,
@@ -6,7 +7,7 @@ export async function GET(
 ) {
   const { uuid } = await context.params;
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/records/emergency-scan/${uuid}/`, {
+    const res = await fetch(`${API_BASE}/api/records/emergency-scan/${uuid}/`, {
       cache: "no-store",
     });
 
