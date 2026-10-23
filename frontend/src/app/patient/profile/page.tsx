@@ -252,7 +252,7 @@ export default function PatientProfilePage() {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-8 max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
@@ -282,9 +282,9 @@ export default function PatientProfilePage() {
         </div>
       </div>
 
-      <form id="profile-form" onSubmit={handleSaveProfile} className="space-y-8">
+      <form id="profile-form" onSubmit={handleSaveProfile} className="space-y-6 sm:space-y-8">
         {/* 1. PERSONAL INFORMATION */}
-        <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-6">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-5 sm:space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <User className="w-5 h-5" />
@@ -356,7 +356,7 @@ export default function PatientProfilePage() {
         </div>
 
         {/* 2. CLINICAL & EMERGENCY VITALS */}
-        <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-6">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-5 sm:space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
               <ShieldAlert className="w-5 h-5" />
@@ -468,9 +468,9 @@ export default function PatientProfilePage() {
       </form>
 
       {/* 3. ALLERGIES & CHRONIC CONDITIONS SECTION */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
         {/* Allergies Card */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-500" />
@@ -538,7 +538,7 @@ export default function PatientProfilePage() {
         </div>
 
         {/* Chronic Conditions Card */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-500" />

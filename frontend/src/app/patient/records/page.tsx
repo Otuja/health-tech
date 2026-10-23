@@ -193,12 +193,12 @@ export default function PatientRecords() {
       className="space-y-8 max-w-5xl mx-auto pb-12"
     >
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Patient EHR & Health Records
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            Patient EHR &amp; Health Records
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-500 text-sm mt-0.5">
             Your centralized health record. Upload past lab results, scans, and view official doctor consultations.
           </p>
         </div>

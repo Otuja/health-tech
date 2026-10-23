@@ -131,10 +131,10 @@ export default function DoctorAppointments() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8 max-w-5xl mx-auto"
     >
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Clinician Schedule & Slots</h1>
-          <p className="text-slate-600 mt-1">Manage consultation availability and review booked patient visits.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Clinician Schedule & Slots</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Manage consultation availability and review booked patient visits.</p>
         </div>
         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold w-fit">
           <Calendar className="w-4 h-4 text-emerald-600" />
@@ -142,10 +142,10 @@ export default function DoctorAppointments() {
         </span>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
         
         {/* Create Slot Form */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 h-fit">
+        <div className="bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-100 h-fit">
           <div className="flex items-center gap-2 mb-6 text-slate-900">
             <PlusCircle className="w-5 h-5 text-emerald-600" />
             <h2 className="text-xl font-bold">Add Availability</h2>
@@ -194,10 +194,10 @@ export default function DoctorAppointments() {
         </div>
 
         {/* Existing Slots & Appointments */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-5 sm:space-y-8">
           
           {/* Booked Appointments */}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+          <div className="bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-900">Booked Patient Consultations</h2>
               <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
@@ -282,7 +282,7 @@ export default function DoctorAppointments() {
           </div>
 
           {/* Time Slots Published */}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+          <div className="bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-900">Published Time Slots</h2>
               <span className="text-xs font-medium text-slate-500">

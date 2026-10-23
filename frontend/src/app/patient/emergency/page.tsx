@@ -215,12 +215,12 @@ export default function PatientEmergencyProfile() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8 max-w-5xl mx-auto"
     >
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Emergency Profile & QR Code</h1>
-          <p className="text-slate-600 mt-1">NDPR-compliant public medical profile accessible to paramedics and first responders.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Emergency Profile &amp; QR Code</h1>
+          <p className="text-slate-500 text-sm mt-0.5">NDPR-compliant public medical profile accessible to paramedics and first responders.</p>
         </div>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-semibold">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-semibold self-start sm:self-auto">
           <ShieldAlert className="w-4 h-4 text-red-600" />
           Critical Vitals Pass
         </div>
@@ -376,10 +376,10 @@ export default function PatientEmergencyProfile() {
           </div>
 
           {/* Right Column: Profile Editor & Allergies */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-5 sm:space-y-8">
             
             {/* Vitals Form */}
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <div className="bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <Heart className="w-5 h-5 text-red-500" />

@@ -131,14 +131,14 @@ export default function DoctorDashboard() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8 max-w-5xl mx-auto"
     >
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Clinician Dashboard</h1>
-          <p className="text-slate-600 mt-1">Practice summary, daily schedule, and patient care management.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Clinician Dashboard</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Practice summary, daily schedule, and patient care management.</p>
         </div>
         <Link
           href="/doctor/appointments"
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-full font-medium hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 text-sm w-fit"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-full font-semibold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 text-xs sm:text-sm w-fit"
         >
           <PlusCircle className="w-4 h-4" />
           <span>+ Add Time Slot</span>
@@ -146,68 +146,68 @@ export default function DoctorDashboard() {
       </header>
 
       {/* Top 4 Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Booked Visits</h3>
-              <p className="text-3xl font-extrabold text-slate-900 mt-2">{loading ? "..." : appointments.length}</p>
+              <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Booked Visits</h3>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 sm:mt-2">{loading ? "..." : appointments.length}</p>
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Calendar className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-[11px] text-emerald-600 font-semibold mt-3">Active appointments</p>
+          <p className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold mt-2 sm:mt-3">Active appointments</p>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Assigned Patients</h3>
-              <p className="text-3xl font-extrabold text-slate-900 mt-2">{loading ? "..." : patients.length}</p>
+              <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Patients</h3>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 sm:mt-2">{loading ? "..." : patients.length}</p>
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Users className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-[11px] text-blue-600 font-semibold mt-3">Under medical supervision</p>
+          <p className="text-[10px] sm:text-[11px] text-blue-600 font-semibold mt-2 sm:mt-3">Under supervision</p>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Records Authored</h3>
-              <p className="text-3xl font-extrabold text-slate-900 mt-2">{loading ? "..." : recordCount}</p>
+              <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Records</h3>
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 sm:mt-2">{loading ? "..." : recordCount}</p>
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <FileText className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-[11px] text-emerald-600 font-semibold mt-3">NDPR verified</p>
+          <p className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold mt-2 sm:mt-3">NDPR verified</p>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Next Open Slot</h3>
-              <p className="text-lg font-bold text-slate-900 mt-3 truncate max-w-[130px]">
+              <h3 className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Next Slot</h3>
+              <p className="text-base sm:text-lg font-bold text-slate-900 mt-1 sm:mt-3 truncate max-w-[90px] sm:max-w-[130px]">
                 {loading ? "..." : nextOpenSlot ? new Date(nextOpenSlot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "None"}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-[11px] text-purple-600 font-semibold mt-2">
+          <p className="text-[10px] sm:text-[11px] text-purple-600 font-semibold mt-1 sm:mt-2">
             {availableSlots.length} open slot(s)
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
         
         {/* Booked Consultations Schedule */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-900">Upcoming Patient Visits</h2>
@@ -280,7 +280,7 @@ export default function DoctorDashboard() {
         </div>
 
         {/* Quick Actions Panel */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
+        <div className="bg-white p-5 sm:p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between">
           <div>
             <h2 className="text-xl font-bold text-slate-900 mb-6">Quick Navigation</h2>
             <div className="space-y-3">

@@ -45,8 +45,8 @@ export default function DoctorPatientsDirectory() {
     >
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Patient Directory</h1>
-          <p className="text-slate-600 mt-1">NDPR-authorized roster of patients actively under your medical supervision.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Patient Directory</h1>
+          <p className="text-slate-600 text-xs sm:text-sm mt-1">NDPR-authorized roster of patients actively under your medical supervision.</p>
         </div>
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold">
           <ShieldCheck className="w-4 h-4 text-blue-600" />
@@ -80,8 +80,8 @@ export default function DoctorPatientsDirectory() {
         ) : (
           <div className="divide-y divide-slate-100">
             {patients.map((patient) => (
-              <div key={patient.id} className="p-6 md:p-8 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-start gap-4">
+              <div key={patient.id} className="p-4 sm:p-6 md:p-8 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+                <div className="flex items-start gap-3.5 sm:gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-emerald-100/70 text-emerald-800 flex items-center justify-center text-xl font-bold flex-shrink-0">
                     {patient.name.charAt(0).toUpperCase()}
                   </div>
@@ -110,7 +110,7 @@ export default function DoctorPatientsDirectory() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 self-end md:self-center">
+                <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap self-stretch sm:self-end md:self-center">
                   <Link
                     href="/doctor/records"
                     className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"

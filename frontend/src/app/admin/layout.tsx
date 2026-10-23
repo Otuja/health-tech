@@ -202,9 +202,49 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* MAIN WORKSPACE */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
           {children}
         </main>
+
+        {/* MOBILE BOTTOM NAVIGATION */}
+        <nav
+          aria-label="Admin Mobile Navigation"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700/80 px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.3)]"
+        >
+          <div className="flex items-center justify-around max-w-md mx-auto">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+                    isActive
+                      ? "text-emerald-400 font-bold"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">
+                    {item.name.split(" ")[0]}
+                  </span>
+                  {isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1" />
+                  )}
+                </Link>
+              );
+            })}
+            <button
+              onClick={handleLogout}
+              className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-red-400 hover:text-red-300 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5 tracking-tight font-medium leading-none">Sign Out</span>
+            </button>
+          </div>
+        </nav>
       </div>
     </ProtectedRoute>
   );

@@ -148,16 +148,16 @@ export default function AppointmentBooking() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8 max-w-5xl mx-auto pb-12"
     >
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-heading">
-            Doctor Consultations & Appointments
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-heading">
+            Doctor Consultations &amp; Appointments
           </h1>
-          <p className="text-slate-600 mt-1 text-sm">
+          <p className="text-slate-500 mt-0.5 text-sm">
             Schedule a visit with licensed cardiologists, pulmonologists, and trauma physicians. Guaranteed anti-double-booking.
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold self-start sm:self-auto">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
           Real-Time Slot Concurrency
         </div>
@@ -326,7 +326,7 @@ export default function AppointmentBooking() {
                     )}
                   </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="text-xs font-semibold text-slate-700 bg-white px-3.5 py-2 rounded-xl border border-slate-200">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-emerald-600" />
@@ -342,7 +342,7 @@ export default function AppointmentBooking() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 w-full sm:w-auto">
+                    <div className="flex flex-wrap gap-2">
                       {appt.status === "COMPLETED" ? (
                         <>
                           <span className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 text-slate-500 font-semibold text-xs border border-slate-200">

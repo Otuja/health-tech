@@ -113,7 +113,7 @@ export default function DoctorProfilePage() {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
@@ -141,8 +141,8 @@ export default function DoctorProfilePage() {
         </button>
       </div>
 
-      <form id="doctor-profile-form" onSubmit={handleSaveProfile} className="space-y-8">
-        <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-6">
+      <form id="doctor-profile-form" onSubmit={handleSaveProfile} className="space-y-6 sm:space-y-8">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-5 sm:space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Stethoscope className="w-5 h-5" />

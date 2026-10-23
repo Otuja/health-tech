@@ -148,17 +148,17 @@ export default function AdminDashboard() {
       </header>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         
         {/* Total Patients */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
+        <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Registered Patients</span>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Users className="w-5 h-5" />
+            <span className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Patients</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-3xl font-extrabold text-slate-900 mt-4 tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 sm:mt-4 tracking-tight">
             {loading ? "..." : stats?.total_patients ?? 0}
           </p>
           <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium mt-2">
@@ -168,14 +168,14 @@ export default function AdminDashboard() {
         </div>
 
         {/* Total Doctors */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
+        <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Medical Specialists</span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Stethoscope className="w-5 h-5" />
+            <span className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Doctors</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+              <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-3xl font-extrabold text-slate-900 mt-4 tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 sm:mt-4 tracking-tight">
             {loading ? "..." : stats?.total_doctors ?? 0}
           </p>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-2">
@@ -185,14 +185,14 @@ export default function AdminDashboard() {
         </div>
 
         {/* Telehealth Consultations */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
+        <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Consultations Booked</span>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Calendar className="w-5 h-5" />
+            <span className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">Consults</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-3xl font-extrabold text-slate-900 mt-4 tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 sm:mt-4 tracking-tight">
             {loading ? "..." : stats?.total_appointments ?? 0}
           </p>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-2">
@@ -202,14 +202,14 @@ export default function AdminDashboard() {
         </div>
 
         {/* Encrypted EHR & Passes */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
+        <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">EHR & Emergency Vitals</span>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5" />
+            <span className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wider">EHR & Passes</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="text-3xl font-extrabold text-slate-900 mt-4 tracking-tight">
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 sm:mt-4 tracking-tight">
             {loading ? "..." : (stats?.total_documents ?? 0) + (stats?.total_emergency_profiles ?? 0)}
           </p>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-2">
@@ -224,7 +224,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Column: Doctor Credentialing Quick List */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs">
+        <div className="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 p-4 sm:p-6 shadow-xs">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">

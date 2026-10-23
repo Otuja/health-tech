@@ -208,7 +208,7 @@ export default function Home() {
             </div>
 
             {/* Feature 2: Patient EHR & Uploads */}
-            <div className="bg-slate-50 hover:bg-emerald-50/40 p-8 rounded-3xl border border-slate-200/90 transition-all hover:shadow-lg hover:border-emerald-200 flex flex-col justify-between group">
+            <div className="bg-slate-50 hover:bg-emerald-50/40 p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/90 transition-all hover:shadow-lg hover:border-emerald-200 flex flex-col justify-between group">
               <div>
                 <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-900/20 mb-6 group-hover:scale-110 transition-transform">
                   <FileText className="w-7 h-7" />
@@ -230,7 +230,7 @@ export default function Home() {
             </div>
 
             {/* Feature 3: Emergency QR Pass */}
-            <div className="bg-gradient-to-br from-emerald-950 to-slate-900 text-white p-8 rounded-3xl border border-emerald-900/80 shadow-xl flex flex-col justify-between relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-emerald-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-emerald-900/80 shadow-xl flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl" />
               <div>
                 <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/30 mb-6 group-hover:scale-110 transition-transform">
@@ -536,8 +536,8 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 mt-12 pt-6 border-t border-slate-900 text-center text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} HealthTech Platform Inc. Built with green life & vitality.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-10 sm:mt-12 pt-6 border-t border-slate-900 text-center text-xs text-slate-500">
+          &copy; {new Date().getFullYear()} HealthTech Platform Inc. Built with green life &amp; vitality.
         </div>
       </footer>
     </div>

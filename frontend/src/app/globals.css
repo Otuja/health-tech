@@ -79,7 +79,21 @@
   }
 }
 
-/* Custom Emerald Pulse & Glassmorphic Utilities */
+/* ─── Mobile Utilities ─── */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe overflow guard */
+.overflow-x-clip {
+  overflow-x: clip;
+}
+
+/* ─── Custom Emerald Pulse & Glassmorphic Utilities ─── */
 .glass-panel {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
