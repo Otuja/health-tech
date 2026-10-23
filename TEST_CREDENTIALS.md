@@ -103,17 +103,23 @@ This document provides full credentials and guided testing workflows for the Hea
 
 ---
 
-### 6. Virtual Telehealth Video Consultation Room
-- **Hosted Production Room:** [https://health-tech-psi.vercel.app/consultation/1](https://health-tech-psi.vercel.app/consultation/1)
-- **Local Development Room:** [http://localhost:3000/consultation/1](http://localhost:3000/consultation/1)
-1. Log in on Device 1 (e.g. Smartphone or Laptop) as **Doctor** (`doctor` / `doctorpass123`).
-2. Log in on Device 2 (e.g. PC or Tablet) as **Patient** (`patient` / `patientpass123`).
-3. Both devices open the video consultation room for Appointment #1:
-   - **Live WebRTC Stream with TURN/STUN Relay:** Enables real-time video and audio feeds across different networks (e.g., mobile cellular 4G/5G <-> home Wi-Fi).
-   - **Call Controls:** Mute microphone, toggle camera, or end consultation.
-   - **One-Click Reconnect:** Click `🔄 Reconnect` in the header at any time to re-negotiate ICE candidates and signaling without reloading.
-   - **In-Call Clinical Chat:** Real-time messages sent strictly between the attending physician and patient.
-   - **Consultation End Notification:** When either participant leaves or ends the consultation, the other device is notified immediately with a session termination modal.
+### 6. Virtual Telehealth Video Consultation Rooms
+- **Consultation Room #1 (Dr. Sarah Connor & Alex Murphy):**
+  - **URL:** [https://health-tech-psi.vercel.app/consultation/1](https://health-tech-psi.vercel.app/consultation/1)
+  - **Doctor Account:** `doctor` / `doctorpass123`
+  - **Patient Account:** `patient` / `patientpass123`
+- **Consultation Room #3 (Dr. Sarah Connor & Chioma Okonkwo):**
+  - **URL:** [https://health-tech-psi.vercel.app/consultation/3](https://health-tech-psi.vercel.app/consultation/3)
+  - **Doctor Account:** `doctor` / `doctorpass123`
+  - **Patient Account:** `chioma` / `patientpass123`
+
+#### Video Call Features:
+- **Live WebRTC Stream with TURN/STUN Relay:** Enables real-time video and audio feeds across different networks (e.g., mobile cellular 4G/5G <-> home Wi-Fi).
+- **Call Controls:** Mute microphone, toggle camera, or end consultation.
+- **Resilient Fallback:** If webcam hardware is busy or exclusive to another tab/app, automatically falls back to encrypted audio-only streaming without halting the call.
+- **One-Click Reconnect:** Click `🔄 Reconnect` in the header at any time to re-negotiate ICE candidates and signaling without reloading.
+- **In-Call Clinical Chat:** Real-time messages sent strictly between the attending physician and patient.
+- **Consultation End Notification:** When either participant leaves or ends the consultation, the other device is notified immediately with a session termination modal.
 
 ---
 
