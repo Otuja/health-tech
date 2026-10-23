@@ -178,24 +178,25 @@ export default function PatientEmergencyProfile() {
     }
   };
 
-  const [networkHost, setNetworkHost] = useState("192.168.1.184:3000");
+  const [networkHost, setNetworkHost] = useState("");
   const [showHostInput, setShowHostInput] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const hostname = window.location.hostname;
-      const port = window.location.port || "3000";
-      if (hostname !== "localhost" && hostname !== "127.0.0.1") {
-        setNetworkHost(`${hostname}:${port}`);
-      } else {
-        setNetworkHost(`192.168.1.184:${port}`);
-      }
+      setNetworkHost(window.location.origin);
     }
   }, []);
 
-  const publicUrl = profile?.uuid 
-    ? `http://${networkHost}/emergency/${profile.uuid}`
-    : "";
+  const getFullScanUrl = () => {
+    if (!profile?.uuid) return "";
+    const base = networkHost || (typeof window !== "undefined" ? window.location.origin : "https://health-tech-psi.vercel.app");
+    const cleanBase = base.startsWith("http://") || base.startsWith("https://") 
+      ? base.replace(/\/+$/, "") 
+      : `https://${base.replace(/\/+$/, "")}`;
+    return `${cleanBase}/emergency/${profile.uuid}`;
+  };
+
+  const publicUrl = getFullScanUrl();
 
   const qrImageUrl = profile?.uuid
     ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(publicUrl)}`
@@ -246,6 +247,7 @@ export default function PatientEmergencyProfile() {
             </p>
 
             {/* Network Host Switcher for Phone Scanning */}
+            {/* Scan Target Address */}
             <div className="w-full bg-slate-800/80 border border-slate-700 p-2.5 rounded-2xl mb-4 text-left">
               <div className="flex items-center justify-between text-[11px] mb-1.5">
                 <span className="text-slate-400 font-medium">Scan Target Address:</span>
@@ -254,7 +256,7 @@ export default function PatientEmergencyProfile() {
                   onClick={() => setShowHostInput(!showHostInput)}
                   className="text-emerald-400 hover:text-emerald-300 font-semibold underline text-[10px]"
                 >
-                  {showHostInput ? "Done" : "Change IP"}
+                  {showHostInput ? "Done" : "Custom Address"}
                 </button>
               </div>
 
@@ -264,45 +266,33 @@ export default function PatientEmergencyProfile() {
                     type="text"
                     value={networkHost}
                     onChange={(e) => setNetworkHost(e.target.value)}
-                    placeholder="e.g. 192.168.1.184:3000"
+                    placeholder="e.g. https://health-tech-psi.vercel.app"
                     className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setNetworkHost(typeof window !== "undefined" ? window.location.origin : "https://health-tech-psi.vercel.app")}
+                    className="px-2 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold"
+                  >
+                    Reset
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-1 text-xs">
-                  <code className="text-emerald-400 font-mono text-[11px] bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-700 truncate">
-                    {networkHost}
+                  <code className="text-emerald-400 font-mono text-[11px] bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-700 truncate max-w-[200px]" title={publicUrl}>
+                    {publicUrl.replace(/^https?:\/\//, "")}
                   </code>
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setNetworkHost("192.168.1.184:3000")}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        networkHost.includes("192.168.1.184") 
-                          ? "bg-emerald-500 text-slate-950" 
-                          : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                      }`}
-                      title="For scanning from your phone on local Wi-Fi"
-                    >
-                      Wi-Fi IP
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNetworkHost("localhost:3000")}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        networkHost.includes("localhost") 
-                          ? "bg-emerald-500 text-slate-950" 
-                          : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                      }`}
-                      title="For testing on this computer"
-                    >
-                      Localhost
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={copyScanUrl}
+                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  >
+                    Copy Link
+                  </button>
                 </div>
               )}
               <p className="text-[10px] text-slate-400 mt-1.5">
-                💡 Ensure your phone is on the <strong>same Wi-Fi</strong> network as this PC.
+                📲 Scan with any smartphone camera to open emergency vitals.
               </p>
             </div>
 

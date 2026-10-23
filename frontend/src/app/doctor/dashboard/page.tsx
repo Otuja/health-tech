@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { toast } from "sonner";
 import { 
   Calendar, 
   Users, 
@@ -12,7 +13,8 @@ import {
   PlusCircle, 
   CheckCircle2, 
   Activity,
-  User
+  User,
+  Radio
 } from "lucide-react";
 import { authFetch } from "@/lib/api";
 
@@ -47,6 +49,8 @@ export default function DoctorDashboard() {
   const [patients, setPatients] = useState<PatientItem[]>([]);
   const [recordCount, setRecordCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const previousSlotsRef = useRef<Map<number, boolean>>(new Map());
+  const initialLoadDoneRef = useRef(false);
 
   const fetchDoctorDashboardData = useCallback(async () => {
     try {
@@ -59,7 +63,25 @@ export default function DoctorDashboard() {
       // Fetch Doctor's Slots
       const slotsRes = await authFetch("/api/appointments/slots/");
       if (slotsRes.ok) {
-        setSlots(await slotsRes.json());
+        const slotsData: SlotItem[] = await slotsRes.json();
+        
+        // Check if any slot transitioned from unbooked -> booked
+        if (initialLoadDoneRef.current) {
+          slotsData.forEach((s) => {
+            const wasBooked = previousSlotsRef.current.get(s.id);
+            if (wasBooked === false && s.is_booked === true) {
+              toast.success("Live Update: A patient just booked an open consultation slot!");
+            }
+          });
+        }
+
+        // Update map
+        const newMap = new Map<number, boolean>();
+        slotsData.forEach((s) => newMap.set(s.id, s.is_booked));
+        previousSlotsRef.current = newMap;
+        initialLoadDoneRef.current = true;
+
+        setSlots(slotsData);
       }
 
       // Fetch Assigned Patients
@@ -83,6 +105,21 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     fetchDoctorDashboardData();
+
+    // Auto-refresh every 5 seconds so newly booked slots update immediately without reload
+    const interval = setInterval(() => {
+      fetchDoctorDashboardData();
+    }, 5000);
+
+    const onSync = () => fetchDoctorDashboardData();
+    window.addEventListener("focus", onSync);
+    document.addEventListener("visibilitychange", onSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onSync);
+      document.removeEventListener("visibilitychange", onSync);
+    };
   }, [fetchDoctorDashboardData]);
 
   const availableSlots = slots.filter(s => !s.is_booked);

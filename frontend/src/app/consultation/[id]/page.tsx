@@ -134,6 +134,12 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
   const [peerState, setPeerState] = useState<string>("initializing");
   const [audioNeedsUnlock, setAudioNeedsUnlock] = useState(false);
 
+  // Speaker / Volume Boost State (Voice Amplification via Web Audio GainNode)
+  const [speakerBoost, setSpeakerBoost] = useState<number>(100);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const mediaElementSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+
   // Call Ended Modal State (Industrial Standard Notification)
   const [callEndedModalOpen, setCallEndedModalOpen] = useState(false);
   const [callEndedData, setCallEndedData] = useState<CallEndedData | null>(null);
@@ -512,11 +518,69 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
     }
   }, [appointmentId, handleSignal, callEndedModalOpen]);
 
-  // Unlock audio on mobile devices
+  // Audio Booster via Web Audio API GainNode
+  const setupAudioGain = useCallback(() => {
+    try {
+      if (!remoteVideoRef.current) return;
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+
+      if (!gainNodeRef.current) {
+        const gain = ctx.createGain();
+        gain.gain.value = speakerBoost / 100;
+        gain.connect(ctx.destination);
+        gainNodeRef.current = gain;
+      }
+
+      if (!mediaElementSourceRef.current && remoteVideoRef.current) {
+        const source = ctx.createMediaElementSource(remoteVideoRef.current);
+        source.connect(gainNodeRef.current);
+        mediaElementSourceRef.current = source;
+      }
+    } catch (err) {
+      console.warn("Audio gain initialization note:", err);
+    }
+  }, [speakerBoost]);
+
+  const cycleSpeakerBoost = () => {
+    const levels = [100, 150, 200, 250];
+    const currentIndex = levels.indexOf(speakerBoost);
+    const nextLevel = levels[(currentIndex + 1) % levels.length];
+    setSpeakerBoost(nextLevel);
+
+    try {
+      setupAudioGain();
+      if (gainNodeRef.current) {
+        gainNodeRef.current.gain.value = nextLevel / 100;
+      }
+      if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+        audioCtxRef.current.resume();
+      }
+      toast.success(
+        nextLevel > 100 
+          ? `🔊 Speaker Boost active: ${nextLevel}% volume!` 
+          : `🔈 Speaker volume set to normal (100%)`
+      );
+    } catch (err) {
+      console.warn("Could not adjust audio gain:", err);
+    }
+  };
+
+  // Unlock audio on mobile devices and enable speaker booster
   const handleUnlockAudio = () => {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.play().then(() => {
         setAudioNeedsUnlock(false);
+        setupAudioGain();
+        toast.success("Remote audio active.");
       }).catch(() => {});
     }
   };
@@ -770,35 +834,35 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between relative overflow-hidden font-sans">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between relative overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
         
-        {/* TOP STATUS BAR */}
-        <header className="px-4 sm:px-6 py-3.5 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 flex items-center justify-between z-20">
+        {/* TOP STATUS BAR: Modern White + Green Theme */}
+        <header className="px-4 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200/90 flex items-center justify-between z-20 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center shadow-md shadow-emerald-600/30">
-              <Stethoscope className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-xs">
+              <Stethoscope className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-heading font-bold text-sm text-white tracking-tight">
+                <span className="font-heading font-bold text-sm text-slate-900 tracking-tight">
                   HealthTech Teleconsultation Room
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  <span className={`w-1.5 h-1.5 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className={`w-1.5 h-1.5 rounded-full ${remoteStreamActive ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
                   {remoteStreamActive ? "P2P WebRTC Connected" : "Connecting Peer..."}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 {appointment ? `${appointment.doctor_name} (${appointment.doctor_specialization}) • Patient: ${appointment.patient_name}` : "Connecting to clinical session..."}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {audioNeedsUnlock && (
               <button
                 onClick={handleUnlockAudio}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg animate-pulse"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md animate-pulse"
               >
                 <Volume2 className="w-3.5 h-3.5" />
                 <span>Tap to Enable Audio</span>
@@ -807,26 +871,26 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
             <button
               onClick={handleReconnect}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors active:scale-95"
               title="Reset P2P video stream if connection stalled"
             >
-              <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
+              <RotateCw className="w-3.5 h-3.5 text-emerald-600" />
               <span>Reconnect</span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono font-medium text-slate-300">
-              <Clock className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-mono font-medium text-slate-700">
+              <Clock className="w-3.5 h-3.5 text-emerald-600" />
               <span>{formatTimer(callDuration)}</span>
             </div>
 
-            <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800/80 text-[11px] text-slate-400 border border-slate-700">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-[11px] text-emerald-700 border border-emerald-200 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>NDPR AES-256</span>
             </div>
 
             <button
               onClick={handleEndCall}
-              className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-red-600/30 active:scale-95"
+              className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-rose-600/25 active:scale-95"
             >
               <PhoneOff className="w-3.5 h-3.5" />
               <span>End Call</span>
@@ -835,14 +899,14 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
         </header>
 
         {/* MAIN VIDEO FEEDS AREA */}
-        <main className="flex-1 p-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-stretch justify-center relative overflow-hidden">
+        <main className="flex-1 p-3 sm:p-5 flex flex-col lg:flex-row gap-4 items-stretch justify-center relative overflow-hidden max-w-7xl w-full mx-auto">
           
           {/* Main Remote Feed: Doctor viewing Patient, or Patient viewing Doctor */}
-          <div className="flex-1 bg-slate-900 rounded-3xl border border-slate-800 relative overflow-hidden flex flex-col justify-between p-4 shadow-2xl min-h-[360px]">
+          <div className="flex-1 bg-slate-950 rounded-3xl border border-slate-300/80 relative overflow-hidden flex flex-col justify-between p-4 shadow-xl min-h-[360px]">
             
             {/* Remote Participant Label */}
             <div className="flex items-center justify-between z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/70 backdrop-blur-md border border-slate-800 text-xs">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-xs">
                 <span className={`w-2 h-2 rounded-full ${remoteStreamActive ? "bg-emerald-400" : "bg-amber-400 animate-pulse"}`} />
                 <span className="font-bold text-white">
                   {userRole === "DOCTOR" 
@@ -867,7 +931,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
             {/* Connecting / Standby Placeholder shown while waiting for peer stream */}
             {!remoteStreamActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 p-6 text-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-emerald-600/20 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 text-3xl font-bold shadow-2xl shadow-emerald-500/10 mb-4 animate-pulse">
                   {userRole === "DOCTOR" 
                     ? (appointment?.patient_name?.charAt(0) || "P")
@@ -880,7 +944,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                   Connecting peer-to-peer clinical stream...
                 </p>
-                <p className="text-[11px] text-slate-500 mt-1 max-w-sm">
+                <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
                   {userRole === "DOCTOR" 
                     ? "Ensure the patient has opened this consultation room from their device." 
                     : "Connecting with physician. Please keep camera and microphone enabled."}
@@ -889,7 +953,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             )}
 
             {/* Bottom Audio / Connection Status Indicator */}
-            <div className="z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/70 backdrop-blur-md border border-slate-800 self-start text-[11px] text-slate-300">
+            <div className="z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 self-start text-[11px] text-slate-300">
               <div className="flex items-center gap-0.5">
                 <span className={`w-1 h-2.5 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce" : "bg-slate-600"}`} />
                 <span className={`w-1 h-4 rounded-full ${remoteStreamActive ? "bg-emerald-400 animate-bounce delay-75" : "bg-slate-600"}`} />
@@ -902,14 +966,14 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Local User Self-Preview Window */}
-          <div className="w-full lg:w-80 h-52 lg:h-auto bg-slate-900 rounded-3xl border border-slate-800 relative overflow-hidden flex flex-col justify-between p-3.5 shadow-2xl flex-shrink-0">
+          <div className="w-full lg:w-80 h-52 lg:h-auto bg-slate-950 rounded-3xl border border-slate-300/80 relative overflow-hidden flex flex-col justify-between p-3.5 shadow-xl flex-shrink-0">
             <div className="flex items-center justify-between z-10">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-950/70 backdrop-blur-md border border-slate-800 text-[11px] font-bold text-white flex items-center gap-1.5">
+              <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-[11px] font-bold text-white flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${!videoDisabled && hasCameraAccess ? "bg-emerald-400" : "bg-amber-400"}`} />
                 You ({userRole === "DOCTOR" ? "Dr. Self" : "Patient Self"})
               </span>
               {audioMuted && (
-                <span className="p-1 rounded-md bg-red-500/20 text-red-400 border border-red-500/30">
+                <span className="p-1 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">
                   <MicOff className="w-3.5 h-3.5" />
                 </span>
               )}
@@ -928,14 +992,14 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
             {/* Camera Muted or Fallback Preview Overlay */}
             {(!hasCameraAccess || videoDisabled) && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-850 p-4 text-center z-5">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-4 text-center z-5">
                 <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-xl mb-2 shadow-inner">
                   <User className="w-7 h-7 text-slate-400" />
                 </div>
                 <p className="text-xs font-semibold text-slate-200">
                   {videoDisabled ? "Camera Paused" : "Self Camera Active"}
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5 max-w-[200px]">
+                <p className="text-[10px] text-slate-400 mt-0.5 max-w-[200px]">
                   {videoDisabled ? "Click camera icon below to turn video back on" : "Encrypted Local Stream"}
                 </p>
               </div>
@@ -951,73 +1015,84 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
             </div>
           </div>
 
-          {/* Right Side Drawer: Direct Doctor <-> Patient In-Call Chat & Notes */}
+          {/* Right Side Drawer: Direct Doctor <-> Patient In-Call Chat & Notes (Modern White + Green Theme) */}
           <AnimatePresence>
             {activeTab && (
               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="w-full lg:w-96 bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-3xl p-4 flex flex-col justify-between shadow-2xl z-30 max-lg:fixed max-lg:inset-x-3 max-lg:bottom-24 max-lg:top-16 max-lg:max-h-[calc(100dvh-10rem)] lg:max-h-full"
+                exit={{ opacity: 0, y: 30 }}
+                className="w-full lg:w-96 bg-white border border-slate-200 rounded-3xl p-4 flex flex-col justify-between shadow-2xl z-40 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-14 max-lg:rounded-t-3xl max-lg:rounded-b-none max-lg:border-t max-lg:border-x-0 max-lg:border-b-0 lg:max-h-full"
               >
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                {/* Mobile Drag Handle */}
+                <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-2.5 lg:hidden" />
+
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div>
-                    <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                       {activeTab === "chat" ? (
                         <>
-                          <MessageSquare className="w-4 h-4 text-emerald-400" />
+                          <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <MessageSquare className="w-4 h-4" />
+                          </div>
                           <span>Direct Consultation Chat</span>
                         </>
                       ) : (
                         <>
-                          <FileText className="w-4 h-4 text-emerald-400" />
-                          <span>Encounter Notes & Details</span>
+                          <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <span>Encounter Details & Notes</span>
                         </>
                       )}
                     </h3>
                     {activeTab === "chat" && (
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        Private live messaging with {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Physician")}
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Private messaging with {userRole === "DOCTOR" ? (appointment?.patient_name || "Patient") : (appointment?.doctor_name || "Physician")}
                       </p>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setActiveTab(null)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => setActiveTab(null)}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    title="Close Panel"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
                 {activeTab === "chat" ? (
                   <>
-                    <div className="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 max-h-[340px] lg:max-h-[300px]">
+                    <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 max-h-[calc(100vh-280px)] lg:max-h-[320px]">
                       {messages.length === 0 ? (
-                        <div className="text-center text-slate-500 text-xs py-8 space-y-2">
-                          <p>No messages yet in this consultation.</p>
-                          <p className="text-[11px] text-slate-600">Messages sent here are private and direct between Doctor and Patient.</p>
+                        <div className="text-center text-slate-400 text-xs py-10 space-y-2">
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2">
+                            <MessageSquare className="w-6 h-6 opacity-60" />
+                          </div>
+                          <p className="font-semibold text-slate-700">No in-call messages yet</p>
+                          <p className="text-[11px] text-slate-400 max-w-[220px] mx-auto">
+                            Send direct messages, vital readings, or clinical questions in real time.
+                          </p>
                         </div>
                       ) : (
                         messages.map((m) => (
                           <div 
                             key={m.id} 
-                            className={`p-2.5 rounded-2xl max-w-[85%] text-xs ${
+                            className={`p-3 rounded-2xl max-w-[85%] text-xs shadow-xs transition-all ${
                               m.sender_role === userRole 
-                                ? "bg-emerald-600 text-white ml-auto rounded-br-none shadow-md shadow-emerald-600/20" 
-                                : "bg-slate-800 text-slate-200 mr-auto rounded-bl-none border border-slate-700/60"
+                                ? "bg-emerald-600 text-white ml-auto rounded-br-xs shadow-emerald-600/15" 
+                                : "bg-slate-100 text-slate-800 mr-auto rounded-bl-xs border border-slate-200/80"
                             }`}
                           >
-                            <div className="flex items-center justify-between text-[10px] opacity-75 mb-1 gap-2">
+                            <div className="flex items-center justify-between text-[10px] opacity-80 mb-1 gap-2 font-medium">
                               <span className="font-bold flex items-center gap-1">
-                                {m.sender_role === "DOCTOR" && <Stethoscope className="w-3 h-3 text-emerald-400" />}
+                                {m.sender_role === "DOCTOR" && <Stethoscope className="w-3 h-3 text-emerald-300" />}
                                 {m.sender_name || m.sender_username}
                               </span>
                               <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
-                            <p className="leading-relaxed">{m.text}</p>
+                            <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
                           </div>
                         ))
                       )}
@@ -1025,38 +1100,39 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                       <div ref={chatBottomRef} />
                     </div>
 
-                    <form onSubmit={handleSendMessage} className="pt-2 flex items-center gap-2 border-t border-slate-800">
+                    <form onSubmit={handleSendMessage} className="pt-3 flex items-center gap-2 border-t border-slate-100">
                       <input
                         type="text"
                         placeholder="Type direct message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        className="flex-1 px-3 py-2.5 text-base sm:text-xs rounded-xl bg-slate-950 border border-slate-800 focus:outline-hidden focus:border-emerald-500 text-white placeholder-slate-500"
+                        className="flex-1 px-4 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder:text-slate-400 transition-all shadow-inner"
                       />
                       <button
                         type="submit"
                         disabled={sendingMsg || !newMessage.trim()}
-                        className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 transition-colors"
+                        className="p-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 transition-all shadow-md shadow-emerald-600/20 flex-shrink-0 active:scale-95"
+                        title="Send Message"
                       >
                         <Send className="w-4 h-4" />
                       </button>
                     </form>
                   </>
                 ) : (
-                  <div className="flex-1 overflow-y-auto py-3 space-y-3 text-xs text-slate-300">
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Chief Complaint / Booking Reason:</span>
-                      <p className="text-slate-200 mt-1 font-medium">{appointment?.notes || "General checkup & clinical consult"}</p>
+                  <div className="flex-1 overflow-y-auto py-3 space-y-3 text-xs text-slate-600">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Chief Complaint / Booking Reason:</span>
+                      <p className="text-slate-800 font-semibold">{appointment?.notes || "General checkup & clinical consult"}</p>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Scheduled Time Slot:</span>
-                      <p className="text-slate-200 mt-1">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Scheduled Time Slot:</span>
+                      <p className="text-slate-800 font-medium">
                         {appointment?.slot_start_time ? new Date(appointment.slot_start_time).toLocaleString() : "Live Encounter"}
                       </p>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/20 text-emerald-300 text-[11px] leading-relaxed">
+                    <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs leading-relaxed">
                       💡 <strong>Clinical Tip:</strong> Once finished with the consultation, click <strong>"End Call"</strong> to mark the encounter completed and finalize your medical records.
                     </div>
                   </div>
@@ -1067,67 +1143,92 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
 
         </main>
 
-        {/* BOTTOM FLOATING CONTROLS BAR */}
-        <footer className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center justify-center gap-3 z-20">
-          <button
-            onClick={toggleAudio}
-            className={`p-3.5 rounded-2xl transition-all shadow-md ${
-              audioMuted 
-                ? "bg-red-500/20 text-red-400 border border-red-500/40" 
-                : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-            }`}
-            title={audioMuted ? "Unmute Microphone" : "Mute Microphone"}
-          >
-            {audioMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          </button>
+        {/* BOTTOM FLOATING CONTROLS BAR: Modern White + Green Theme with Speaker Booster */}
+        <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 flex items-center justify-center z-30">
+          <footer className="p-2.5 sm:p-3 bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-2xl rounded-full sm:rounded-3xl flex items-center justify-center gap-2 sm:gap-3 max-w-xl w-full">
+            
+            {/* Microphone Toggle */}
+            <button
+              onClick={toggleAudio}
+              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs ${
+                audioMuted 
+                  ? "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100" 
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              }`}
+              title={audioMuted ? "Unmute Microphone" : "Mute Microphone"}
+            >
+              {audioMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
 
-          <button
-            onClick={toggleCamera}
-            className={`p-3.5 rounded-2xl transition-all shadow-md ${
-              videoDisabled 
-                ? "bg-red-500/20 text-red-400 border border-red-500/40" 
-                : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-            }`}
-            title={videoDisabled ? "Turn Camera On" : "Turn Camera Off"}
-          >
-            {videoDisabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
-          </button>
+            {/* Camera Toggle */}
+            <button
+              onClick={toggleCamera}
+              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs ${
+                videoDisabled 
+                  ? "bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100" 
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              }`}
+              title={videoDisabled ? "Turn Camera On" : "Turn Camera Off"}
+            >
+              {videoDisabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+            </button>
 
-          <button
-            onClick={() => setActiveTab(activeTab === "chat" ? null : "chat")}
-            className={`p-3.5 rounded-2xl transition-all shadow-md relative ${
-              activeTab === "chat" 
-                ? "bg-emerald-600 text-white" 
-                : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-            }`}
-            title="Consultation In-Call Chat"
-          >
-            <MessageSquare className="w-5 h-5" />
-            {messages.length > 0 && activeTab !== "chat" && (
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 absolute top-2 right-2 animate-ping" />
-            )}
-          </button>
+            {/* Speaker Volume Booster (Louder Audio) */}
+            <button
+              onClick={cycleSpeakerBoost}
+              className={`px-3 py-3 rounded-full sm:rounded-2xl transition-all shadow-xs flex items-center gap-1.5 ${
+                speakerBoost > 100 
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold hover:bg-emerald-100 shadow-sm shadow-emerald-500/10" 
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              }`}
+              title={`Speaker Volume: ${speakerBoost}% (Click to boost louder)`}
+            >
+              <Volume2 className={`w-5 h-5 ${speakerBoost > 100 ? "text-emerald-600 animate-pulse" : "text-slate-600"}`} />
+              <span className="text-[11px] font-bold">
+                {speakerBoost > 100 ? `${speakerBoost}%` : "Speaker"}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab(activeTab === "notes" ? null : "notes")}
-            className={`p-3.5 rounded-2xl transition-all shadow-md ${
-              activeTab === "notes" 
-                ? "bg-emerald-600 text-white" 
-                : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-            }`}
-            title="Consultation Details & Notes"
-          >
-            <FileText className="w-5 h-5" />
-          </button>
+            {/* In-Call Chat Button */}
+            <button
+              onClick={() => setActiveTab(activeTab === "chat" ? null : "chat")}
+              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs relative ${
+                activeTab === "chat" 
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25" 
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              }`}
+              title="Direct In-Call Chat"
+            >
+              <MessageSquare className="w-5 h-5" />
+              {messages.length > 0 && activeTab !== "chat" && (
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute top-1.5 right-1.5 ring-2 ring-white" />
+              )}
+            </button>
 
-          <button
-            onClick={handleEndCall}
-            className="px-5 py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 active:scale-95"
-          >
-            <PhoneOff className="w-5 h-5" />
-            <span className="hidden sm:inline">End Consultation</span>
-          </button>
-        </footer>
+            {/* Clinical Notes Button */}
+            <button
+              onClick={() => setActiveTab(activeTab === "notes" ? null : "notes")}
+              className={`p-3 rounded-full sm:rounded-2xl transition-all shadow-xs ${
+                activeTab === "notes" 
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25" 
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              }`}
+              title="Encounter Notes"
+            >
+              <FileText className="w-5 h-5" />
+            </button>
+
+            {/* End Consultation Button */}
+            <button
+              onClick={handleEndCall}
+              className="px-4 sm:px-5 py-3 rounded-full sm:rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all shadow-md shadow-rose-600/25 flex items-center gap-1.5 active:scale-95 ml-1"
+            >
+              <PhoneOff className="w-4 h-4" />
+              <span className="hidden sm:inline">End Call</span>
+            </button>
+
+          </footer>
+        </div>
 
         {/* INDUSTRIAL-STANDARD CALL ENDED RECAP & NOTIFICATION MODAL */}
         <AnimatePresence>

@@ -37,8 +37,8 @@ export default function DoctorAppointments() {
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
       // Fetch slots
       const slotsRes = await authFetch("/api/appointments/slots/");
@@ -51,7 +51,7 @@ export default function DoctorAppointments() {
     } catch (e) {
       console.error("Error loading doctor appointment data:", e);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -74,7 +74,22 @@ export default function DoctorAppointments() {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
+
+    // Auto-refresh every 5 seconds so when a patient books a slot, it updates immediately
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 5000);
+
+    const onSync = () => fetchData(false);
+    window.addEventListener("focus", onSync);
+    document.addEventListener("visibilitychange", onSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onSync);
+      document.removeEventListener("visibilitychange", onSync);
+    };
   }, [fetchData]);
 
   const handleCreateSlot = async (e: React.FormEvent) => {
