@@ -39,19 +39,31 @@ interface EmergencyData {
   updated_at?: string;
 }
 
-import { API_BASE } from "@/lib/api";
+import { getApiBase, PROD_API_URL } from "@/lib/api";
 
 async function getEmergencyData(uuid: string): Promise<EmergencyData | null> {
+  const base = getApiBase();
   try {
-    const res = await fetch(`${API_BASE}/api/records/emergency-scan/${uuid}/`, {
+    const res = await fetch(`${base}/api/records/emergency-scan/${uuid}/`, {
       cache: "no-store",
     });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (err) {
-    console.error("Emergency scan server fetch error:", err);
-    return null;
+    if (res.ok) return await res.json();
+  } catch {
+    // If local failed and we are not already querying PROD, try PROD
   }
+
+  if (base !== PROD_API_URL) {
+    try {
+      const res = await fetch(`${PROD_API_URL}/api/records/emergency-scan/${uuid}/`, {
+        cache: "no-store",
+      });
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.error("Emergency scan server fetch error:", err);
+    }
+  }
+
+  return null;
 }
 
 export default async function PublicEmergencyScanPage({
@@ -140,9 +152,9 @@ export default async function PublicEmergencyScanPage({
             </div>
             <div className="grid gap-2.5">
               {severeAllergies.map((allergy) => (
-                <div key={allergy.id} className="flex justify-between items-center p-3.5 rounded-xl bg-red-900/40 border border-red-700/70">
-                  <span className="font-bold text-white text-base">{allergy.name}</span>
-                  <span className="px-3 py-1 rounded-full bg-red-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-sm">
+                <div key={allergy.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 p-3.5 rounded-xl bg-red-900/40 border border-red-700/70">
+                  <span className="font-bold text-white text-base break-words">{allergy.name}</span>
+                  <span className="px-3 py-1 rounded-full bg-red-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-sm w-fit flex-shrink-0">
                     CRITICAL: {allergy.severity}
                   </span>
                 </div>

@@ -96,7 +96,7 @@ export default function PWAInstaller() {
       {/* Mobile-Friendly PWA Bottom Install Banner */}
       <aside 
         aria-label="PWA Installation"
-        className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50 animate-in slide-in-from-bottom duration-300"
+        className="fixed bottom-20 md:bottom-6 left-3 right-3 sm:left-4 sm:right-4 md:left-auto md:right-6 max-w-md mx-auto md:w-96 z-50 animate-in slide-in-from-bottom duration-300"
       >
         <div className="bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-emerald-500/30 flex items-start gap-3 relative">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center flex-shrink-0 text-white shadow-md shadow-emerald-500/20">

@@ -1,20 +1,37 @@
 import { NextResponse } from "next/server";
-import { API_BASE } from "@/lib/api";
+import { getApiBase, PROD_API_URL } from "@/lib/api";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ uuid: string }> }
 ) {
   const { uuid } = await context.params;
+  const base = getApiBase();
+  
+  let res: Response | null = null;
   try {
-    const res = await fetch(`${API_BASE}/api/records/emergency-scan/${uuid}/`, {
+    res = await fetch(`${base}/api/records/emergency-scan/${uuid}/`, {
       cache: "no-store",
     });
+  } catch {
+    // If local fetch threw network error, attempt cloud
+  }
 
-    if (!res.ok) {
+  if ((!res || !res.ok) && base !== PROD_API_URL) {
+    try {
+      res = await fetch(`${PROD_API_URL}/api/records/emergency-scan/${uuid}/`, {
+        cache: "no-store",
+      });
+    } catch {
+      // both failed
+    }
+  }
+
+  try {
+    if (!res || !res.ok) {
       return NextResponse.json(
         { error: "Emergency profile not found" },
-        { status: res.status }
+        { status: res ? res.status : 404 }
       );
     }
 

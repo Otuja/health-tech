@@ -16,12 +16,15 @@ import {
   ShieldCheck,
   ShieldAlert,
   User,
-  Sparkles
+  Sparkles,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem("user_role");
@@ -32,14 +35,31 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     }
   }, [router]);
 
-interface NavItem {
-  name: string;
-  shortName: string;
-  href: string;
-  icon: any;
-  isCenter?: boolean;
-  isSpecial?: boolean;
-}
+  useEffect(() => {
+    const saved = localStorage.getItem("healthtech_patient_sidebar_collapsed");
+    if (saved !== null) {
+      setIsCollapsed(saved === "true");
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("healthtech_patient_sidebar_collapsed", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  interface NavItem {
+    name: string;
+    shortName: string;
+    href: string;
+    icon: any;
+    isCenter?: boolean;
+    isSpecial?: boolean;
+  }
 
   const navItems: NavItem[] = [
     { name: "Dashboard", shortName: "Home", href: "/patient/dashboard", icon: LayoutDashboard },
@@ -80,7 +100,7 @@ interface NavItem {
               href="/patient/emergency"
               className="px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 font-bold text-[11px] flex items-center gap-1 active:scale-95 transition-transform"
             >
-              <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
               <span>SOS Pass</span>
             </Link>
 
@@ -96,34 +116,98 @@ interface NavItem {
           </div>
         </header>
 
-        {/* DESKTOP SIDEBAR */}
-        <aside className="w-64 bg-white border-r border-slate-200/80 p-6 hidden md:flex flex-col justify-between flex-shrink-0 h-screen sticky top-0">
-          <div>
-            <div className="mb-8">
-              <Link href="/patient/dashboard" className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
+        {/* DESKTOP SIDEBAR (Sticky, Crisp & Modern Collapsible Rail) */}
+        <aside 
+          className={`bg-white border-r border-slate-200/80 hidden md:flex flex-col justify-between flex-shrink-0 h-screen sticky top-0 self-start z-30 transition-[width,padding] duration-300 ease-in-out ${
+            isCollapsed ? "w-20 p-3" : "w-64 p-5"
+          }`}
+        >
+          <div className="flex flex-col min-h-0">
+            {/* Top Brand & Toggle Header */}
+            {isCollapsed ? (
+              <div className="flex flex-col items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                <Link 
+                  href="/patient/dashboard" 
+                  className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 active:scale-95 transition-transform"
+                  title="HealthTech Patient Dashboard"
+                >
                   <HeartPulse className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="font-heading font-extrabold text-xl text-slate-900 tracking-tight">
-                    Health<span className="text-emerald-600">Tech</span>
-                  </span>
-                  <span className="block text-[10px] uppercase font-bold tracking-widest text-emerald-700 -mt-0.5">
-                    Patient Portal
-                  </span>
-                </div>
-              </Link>
-            </div>
+                </Link>
+                <button
+                  onClick={toggleSidebar}
+                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 flex items-center justify-center transition-colors"
+                  title="Expand Sidebar"
+                  aria-label="Expand Sidebar"
+                >
+                  <PanelLeftOpen className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+                <Link href="/patient/dashboard" className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 flex-shrink-0">
+                    <HeartPulse className="w-5 h-5" />
+                  </div>
+                  <div className="truncate">
+                    <span className="font-heading font-extrabold text-xl text-slate-900 tracking-tight block leading-tight">
+                      Health<span className="text-emerald-600">Tech</span>
+                    </span>
+                    <span className="block text-[10px] uppercase font-bold tracking-widest text-emerald-700 -mt-0.5">
+                      Patient Portal
+                    </span>
+                  </div>
+                </Link>
+                <button
+                  onClick={toggleSidebar}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex-shrink-0"
+                  title="Collapse Sidebar"
+                  aria-label="Collapse Sidebar"
+                >
+                  <PanelLeftClose className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
-            <nav className="space-y-1.5">
+            {/* Navigation Items */}
+            <nav className="space-y-1.5 overflow-y-auto no-scrollbar flex-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
+
+                if (isCollapsed) {
+                  return (
+                    <div key={item.href} className="relative group flex justify-center">
+                      <Link
+                        href={item.href}
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                          isActive
+                            ? item.isSpecial
+                              ? "text-white bg-red-600 shadow-md shadow-red-600/25"
+                              : "text-white bg-emerald-600 shadow-md shadow-emerald-600/25"
+                            : item.isSpecial
+                            ? "text-red-700 bg-red-50 hover:bg-red-100/80"
+                            : "text-slate-600 hover:text-emerald-800 hover:bg-emerald-50/70"
+                        }`}
+                        title={item.name}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {item.isSpecial && !isActive && (
+                          <span className="w-2 h-2 rounded-full bg-red-500 absolute top-2 right-2 animate-pulse" />
+                        )}
+                      </Link>
+                      {/* Floating Tooltip */}
+                      <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 top-1/2 -translate-y-1/2">
+                        {item.name}
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center justify-between px-4 py-3 rounded-2xl font-semibold text-xs transition-all ${
+                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-all ${
                       isActive
                         ? item.isSpecial
                           ? "text-white bg-red-600 shadow-md shadow-red-600/25"
@@ -133,12 +217,12 @@ interface NavItem {
                         : "text-slate-600 hover:text-emerald-800 hover:bg-emerald-50/70"
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <Icon className="w-4 h-4" />
-                      <span>{item.name}</span>
+                    <div className="flex items-center space-x-3 truncate">
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{item.name}</span>
                     </div>
                     {item.isSpecial && !isActive && (
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
                     )}
                   </Link>
                 );
@@ -146,30 +230,80 @@ interface NavItem {
             </nav>
           </div>
 
-          <div className="pt-6 border-t border-slate-100 space-y-3">
-            <Link
-              href="/patient/emergency"
-              className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors text-xs font-bold"
-            >
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-red-600" />
-                <span>Emergency SOS Pass</span>
-              </div>
-              <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
-            </Link>
+          {/* Bottom Area (Quick Actions & Security Status) */}
+          <div className={`pt-4 border-t border-slate-100 space-y-2.5 ${isCollapsed ? "flex flex-col items-center" : ""}`}>
+            {isCollapsed ? (
+              <>
+                {/* Collapsed Emergency Pass */}
+                <div className="relative group">
+                  <Link
+                    href="/patient/emergency"
+                    className="w-11 h-11 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 flex items-center justify-center transition-colors relative"
+                    title="Emergency SOS Pass"
+                  >
+                    <ShieldAlert className="w-5 h-5 text-red-600" />
+                    <span className="w-2 h-2 rounded-full bg-red-600 absolute top-1.5 right-1.5 animate-pulse" />
+                  </Link>
+                  <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-red-900 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 top-1/2 -translate-y-1/2">
+                    Emergency SOS Pass
+                  </div>
+                </div>
 
-            <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100/80 flex items-center gap-2 text-[11px] text-emerald-800 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span>NDPR Protected Session</span>
-            </div>
+                {/* Collapsed NDPR badge */}
+                <div className="relative group">
+                  <div
+                    className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center cursor-default"
+                    title="NDPR Protected Session"
+                  >
+                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 top-1/2 -translate-y-1/2">
+                    NDPR Protected Session
+                  </div>
+                </div>
 
-            <button 
-              onClick={handleLogout}
-              className="flex items-center space-x-3 text-red-600 hover:bg-red-50 px-4 py-2.5 rounded-xl font-semibold text-xs transition-colors w-full"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Log out</span>
-            </button>
+                {/* Collapsed Logout */}
+                <div className="relative group">
+                  <button
+                    onClick={handleLogout}
+                    className="w-11 h-11 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
+                    title="Sign Out"
+                    aria-label="Sign Out"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                  <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 top-1/2 -translate-y-1/2">
+                    Log Out
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/patient/emergency"
+                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors text-xs font-bold"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <ShieldAlert className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <span className="truncate">Emergency SOS Pass</span>
+                  </div>
+                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse flex-shrink-0" />
+                </Link>
+
+                <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-100/80 flex items-center gap-2 text-[11px] text-emerald-800 font-semibold truncate">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span className="truncate">NDPR Protected Session</span>
+                </div>
+
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center space-x-3 text-red-600 hover:bg-red-50 px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-colors w-full"
+                >
+                  <LogOut className="w-4 h-4 flex-shrink-0" />
+                  <span>Log out</span>
+                </button>
+              </>
+            )}
           </div>
         </aside>
 

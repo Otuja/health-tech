@@ -104,7 +104,7 @@ if 'test' in sys.argv:
         }
     }
 else:
-    DATABASE_URL = config('DATABASE_URL', default=None)
+    DATABASE_URL = config('DATABASE_URL', default='').strip()
     if DATABASE_URL:
         DATABASES = {
             'default': dj_database_url.config(
@@ -171,6 +171,11 @@ MAILERS = {
 }
 
 AUTH_USER_MODEL = 'users.User'
+
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

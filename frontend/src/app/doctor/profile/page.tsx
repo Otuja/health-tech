@@ -12,7 +12,10 @@ import {
   Award,
   Sparkles,
   Calendar,
-  Activity
+  Activity,
+  KeyRound,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 interface DoctorProfile {
@@ -46,6 +49,15 @@ export default function DoctorProfilePage() {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [specialization, setSpecialization] = useState("");
+
+  // Change Password state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     fetchDoctorProfile();
@@ -98,6 +110,47 @@ export default function DoctorProfilePage() {
       toast.error("Network error updating profile.", { id: toastId });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword) {
+      toast.error("Please enter both your current password and new password.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New password and confirmation password do not match.");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const res = await authFetch("/api/users/change-password/", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Password updated successfully!");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        toast.error(data.error || "Failed to update password.");
+      }
+    } catch {
+      toast.error("Network error updating password. Please try again.");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -183,11 +236,16 @@ export default function DoctorProfilePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Clinical Email Address
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Primary Clinical Email (Account ID)
+                </label>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Unique Identifier
+                </span>
+              </div>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <Mail className="w-4 h-4 text-emerald-600 absolute left-3.5 top-3 pointer-events-none" />
                 <input
                   type="email"
                   required
@@ -197,11 +255,14 @@ export default function DoctorProfilePage() {
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-slate-900"
                 />
               </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Your verified unique practitioner sign-in and patient dispatch email.
+              </p>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                Username (Practitioner ID)
+                Practitioner Username Handle
               </label>
               <input
                 type="text"
@@ -209,6 +270,9 @@ export default function DoctorProfilePage() {
                 value={username}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono text-slate-500 cursor-not-allowed"
               />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Internal system handle for roster and appointment indexing.
+              </p>
             </div>
 
             <div className="md:col-span-2">
@@ -238,6 +302,114 @@ export default function DoctorProfilePage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ACCOUNT SECURITY & CHANGE PASSWORD */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-200/80 shadow-sm space-y-5">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+              <KeyRound className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 font-heading">
+                Security & Password Management
+              </h2>
+              <p className="text-xs text-slate-500">
+                Update your clinician account password to protect doctor-patient confidentiality.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Current Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPass ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors focus:outline-none"
+                    title={showCurrentPass ? "Hide password" : "Show password"}
+                  >
+                    {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPass ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors focus:outline-none"
+                    title={showNewPass ? "Hide password" : "Show password"}
+                  >
+                    {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm New Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPass ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat new password"
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium text-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors focus:outline-none"
+                    title={showConfirmPass ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
+              <span className="text-[11px] text-slate-500">
+                Minimum 6 characters required.
+              </span>
+              <button
+                type="button"
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{changingPassword ? "Updating Password..." : "Update Password"}</span>
+              </button>
             </div>
           </div>
         </div>

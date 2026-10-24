@@ -279,13 +279,13 @@ export default function PatientEmergencyProfile() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-1 text-xs">
-                  <code className="text-emerald-400 font-mono text-[11px] bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-700 truncate max-w-[200px]" title={publicUrl}>
+                  <code className="text-emerald-400 font-mono text-[11px] bg-slate-900/90 px-2 py-0.5 rounded-lg border border-slate-700 truncate max-w-[140px] sm:max-w-[200px]" title={publicUrl}>
                     {publicUrl.replace(/^https?:\/\//, "")}
                   </code>
                   <button
                     type="button"
                     onClick={copyScanUrl}
-                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 hover:bg-slate-600"
+                    className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 hover:bg-slate-600 flex-shrink-0 active:scale-95 transition-transform"
                   >
                     Copy Link
                   </button>

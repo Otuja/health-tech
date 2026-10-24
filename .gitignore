@@ -28,6 +28,8 @@ dist/
 db.sqlite3
 db.sqlite3-journal
 media/
+staticfiles/
+backend/staticfiles/
 
 # Frontend / Node
 node_modules/

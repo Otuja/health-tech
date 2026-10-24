@@ -162,3 +162,53 @@ class AdminDoctorCreateView(APIView):
             "message": "Physician successfully onboarded and credentialed!"
         }, status=status.HTTP_201_CREATED)
 
+class ChangePasswordView(APIView):
+    """
+    Allows authenticated patients, doctors, and administrators to safely change their password.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get('current_password') or request.data.get('old_password', '')
+        new_password = request.data.get('new_password', '')
+        confirm_password = request.data.get('confirm_password', '')
+
+        if not current_password or not new_password:
+            return Response(
+                {"error": "Both current password and new password are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not user.check_password(current_password):
+            return Response(
+                {"error": "Current password does not match our records. Please verify and try again."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if confirm_password and new_password != confirm_password:
+            return Response(
+                {"error": "New password and confirm password do not match."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 6:
+            return Response(
+                {"error": "New password must be at least 6 characters long."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if current_password == new_password:
+            return Response(
+                {"error": "Your new password must be different from your current password."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({
+            "message": "Password changed successfully! Please use your new password next time you sign in."
+        }, status=status.HTTP_200_OK)
+
+

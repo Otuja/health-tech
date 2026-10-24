@@ -1027,7 +1027,7 @@ export default function ConsultationRoom({ params }: { params: Promise<{ id: str
                   {!swappedFeeds && (
                     <>
                       <p className="text-xs text-emerald-400 mt-1 font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Connecting clinical stream...
                       </p>
                       <p className="text-[11px] text-slate-400 mt-1 max-w-xs">

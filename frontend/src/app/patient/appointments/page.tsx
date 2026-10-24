@@ -173,9 +173,10 @@ export default function AppointmentBooking() {
               : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          <Calendar className="w-4 h-4" />
-          <span>Available Specialists</span>
-          <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px]">
+          <Calendar className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate sm:hidden">Specialists</span>
+          <span className="hidden sm:inline">Available Specialists</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] flex-shrink-0">
             {slots.length}
           </span>
         </button>

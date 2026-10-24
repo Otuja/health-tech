@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -9,21 +10,50 @@ import {
   Calendar, 
   Stethoscope, 
   Activity, 
-  ArrowRight,
-  CheckCircle2,
-  Lock,
-  QrCode,
-  Bot,
-  FileText,
-  Clock,
-  Sparkles,
-  PhoneCall,
-  ChevronRight,
-  Award,
-  Users
+  ArrowRight, 
+  CheckCircle2, 
+  Lock, 
+  QrCode, 
+  Bot, 
+  FileText, 
+  Clock, 
+  Sparkles, 
+  PhoneCall, 
+  ChevronRight, 
+  Award, 
+  Users,
+  LogOut,
+  LayoutDashboard
 } from "lucide-react";
 
 export default function Home() {
+  const [authRole, setAuthRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("access_token");
+      const role = localStorage.getItem("user_role");
+      if (token && role) {
+        setAuthRole(role);
+      }
+    }
+  }, []);
+
+  const handleSignOut = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_role");
+      setAuthRole(null);
+    }
+  };
+
+  const getDashboardHref = (role: string) => {
+    if (role === "DOCTOR") return "/doctor/dashboard";
+    if (role === "ADMIN") return "/admin/dashboard";
+    return "/patient/dashboard";
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white overflow-x-hidden w-full">
       {/* TOP NOTIFICATION BAR */}
@@ -61,19 +91,41 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <Link 
-              href="/login" 
-              className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-emerald-700 px-2.5 sm:px-3.5 py-1.5 sm:py-2 transition-colors rounded-xl hover:bg-emerald-50"
-            >
-              Sign In
-            </Link>
-            <Link 
-              href="/register" 
-              className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold py-2 sm:py-2.5 px-3.5 sm:px-5 rounded-xl hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/25 flex items-center gap-1 sm:gap-1.5"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </Link>
+            {authRole ? (
+              <>
+                <Link 
+                  href={getDashboardHref(authRole)} 
+                  className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold py-2 sm:py-2.5 px-3.5 sm:px-5 rounded-xl hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/25 flex items-center gap-1.5"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="text-xs sm:text-sm font-semibold text-slate-500 hover:text-red-600 px-2.5 sm:px-3.5 py-1.5 sm:py-2 transition-colors rounded-xl hover:bg-red-50 flex items-center gap-1"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  href="/login" 
+                  className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-emerald-700 px-2.5 sm:px-3.5 py-1.5 sm:py-2 transition-colors rounded-xl hover:bg-emerald-50"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  href="/register" 
+                  className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold py-2 sm:py-2.5 px-3.5 sm:px-5 rounded-xl hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/25 flex items-center gap-1 sm:gap-1.5"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -100,21 +152,42 @@ export default function Home() {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Link 
-                  href="/login" 
-                  className="bg-emerald-600 text-white text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-8 rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 hover:scale-[1.02] text-center"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Book Doctor Appointment</span>
-                </Link>
+                {authRole ? (
+                  <>
+                    <Link 
+                      href={authRole === "DOCTOR" ? "/doctor/dashboard" : authRole === "ADMIN" ? "/admin/dashboard" : "/patient/appointments"} 
+                      className="bg-emerald-600 text-white text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-8 rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 hover:scale-[1.02] text-center"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>{authRole === "DOCTOR" ? "Doctor Portal" : authRole === "ADMIN" ? "Admin Console" : "Book Doctor Appointment"}</span>
+                    </Link>
+                    <Link 
+                      href="/patient/triage" 
+                      className="bg-white text-slate-800 border border-slate-300 text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-7 rounded-2xl hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2 text-center"
+                    >
+                      <Bot className="w-4 h-4 text-emerald-600" />
+                      <span>AI Health Triage</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      href="/login" 
+                      className="bg-emerald-600 text-white text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-8 rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 hover:scale-[1.02] text-center"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>Book Doctor Appointment</span>
+                    </Link>
 
-                <Link 
-                  href="/register" 
-                  className="bg-white text-slate-800 border border-slate-300 text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-7 rounded-2xl hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2 text-center"
-                >
-                  <FileText className="w-4 h-4 text-emerald-600" />
-                  <span>Upload EHR & Records</span>
-                </Link>
+                    <Link 
+                      href="/patient/triage" 
+                      className="bg-white text-slate-800 border border-slate-300 text-xs sm:text-sm font-bold py-3 sm:py-3.5 px-6 sm:px-7 rounded-2xl hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2 text-center"
+                    >
+                      <Bot className="w-4 h-4 text-emerald-600" />
+                      <span>Try AI Health Triage</span>
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Clinical Trust & Compliance Badges */}
@@ -156,7 +229,7 @@ export default function Home() {
                       <p className="text-[10px] sm:text-[11px] text-emerald-700 font-semibold truncate">Consultant Cardiologist • Active</p>
                     </div>
                   </div>
-                  <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 animate-ping flex-shrink-0 ml-2" />
+                  <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 animate-pulse flex-shrink-0 ml-2" />
                 </div>
               </div>
 

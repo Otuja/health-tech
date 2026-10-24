@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { HeartPulse, UserPlus, Stethoscope, User } from "lucide-react";
-import { API_BASE } from "@/lib/api";
+import { HeartPulse, UserPlus, Stethoscope, User, Eye, EyeOff } from "lucide-react";
+import { API_BASE, getApiBase, setApiBase, PROD_API_URL } from "@/lib/api";
 
 export default function Register() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState("PATIENT");
@@ -37,11 +38,27 @@ export default function Register() {
         payload.specialization = specialization;
       }
       
-      const res = await fetch(`${API_BASE}/api/users/register/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const currentApi = getApiBase();
+      let res: Response;
+      try {
+        res = await fetch(`${currentApi}/api/users/register/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        if (currentApi !== PROD_API_URL) {
+          toast.info("Local backend offline. Retrying with Cloud Backend (Render)...");
+          res = await fetch(`${PROD_API_URL}/api/users/register/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          setApiBase(PROD_API_URL);
+        } else {
+          throw err;
+        }
+      }
       if (res.ok) {
         toast.success("Account registered successfully! Redirecting to login...");
         setTimeout(() => router.push("/login"), 1000);
@@ -61,14 +78,12 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden py-12 px-4 selection:bg-emerald-500 selection:text-white">
-      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-400/15 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-600/10 blur-[130px] pointer-events-none" />
-      
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 selection:bg-emerald-500 selection:text-white">
       <motion.div 
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white/95 backdrop-blur-2xl p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl border border-slate-200/80 z-10 my-4"
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="w-full max-w-md bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200/90 z-10 my-4"
       >
         <div className="text-center mb-6">
           <Link href="/" className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 mb-3 hover:scale-105 transition-transform shadow-sm">
@@ -183,14 +198,25 @@ export default function Register() {
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Password</label>
-            <input 
-              type="password" 
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-sm"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-sm"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-md transition-colors focus:outline-none"
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <button 

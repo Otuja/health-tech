@@ -15,13 +15,16 @@ import {
   Menu, 
   X,
   ShieldAlert,
-  User
+  User,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 
 export default function DoctorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const role = localStorage.getItem("user_role");
@@ -31,6 +34,23 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
       router.push("/patient/dashboard");
     }
   }, [router]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("healthtech_doctor_sidebar_collapsed");
+    if (saved !== null) {
+      setIsCollapsed(saved === "true");
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("healthtech_doctor_sidebar_collapsed", String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   const navItems = [
     { name: "Clinical Dashboard", href: "/doctor/dashboard", icon: LayoutDashboard },
@@ -47,7 +67,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row antialiased">
         
         {/* MOBILE TOP BAR */}
         <div className="md:hidden bg-slate-900 text-white border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
@@ -102,60 +122,152 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
           </div>
         )}
 
-        {/* DESKTOP SIDEBAR */}
-        <aside className="w-64 bg-slate-900 text-white border-r border-slate-800 p-6 hidden md:flex flex-col justify-between flex-shrink-0 h-screen sticky top-0">
-          <div>
-            <div className="mb-8">
-              <Link href="/doctor/dashboard" className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+        {/* DESKTOP SIDEBAR (Sticky & Collapsible Rail) */}
+        <aside 
+          className={`bg-slate-900 text-white border-r border-slate-800 hidden md:flex flex-col justify-between flex-shrink-0 h-screen sticky top-0 self-start z-30 transition-[width,padding] duration-300 ease-in-out ${
+            isCollapsed ? "w-20 p-3" : "w-64 p-5"
+          }`}
+        >
+          <div className="flex flex-col min-h-0">
+            {/* Top Brand & Toggle Header */}
+            {isCollapsed ? (
+              <div className="flex flex-col items-center gap-3 mb-6 pb-4 border-b border-slate-800">
+                <Link 
+                  href="/doctor/dashboard" 
+                  className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 active:scale-95 transition-transform"
+                  title="Clinician Dashboard"
+                >
                   <Stethoscope className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="font-heading font-extrabold text-xl text-white tracking-tight">
-                    Health<span className="text-emerald-400">Tech</span>
-                  </span>
-                  <span className="block text-[10px] uppercase font-bold tracking-widest text-emerald-400 -mt-0.5">
-                    Clinician Portal
-                  </span>
-                </div>
-              </Link>
-            </div>
+                </Link>
+                <button
+                  onClick={toggleSidebar}
+                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors"
+                  title="Expand Sidebar"
+                  aria-label="Expand Sidebar"
+                >
+                  <PanelLeftOpen className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
+                <Link href="/doctor/dashboard" className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 flex-shrink-0">
+                    <Stethoscope className="w-5 h-5" />
+                  </div>
+                  <div className="truncate">
+                    <span className="font-heading font-extrabold text-xl text-white tracking-tight block leading-tight">
+                      Health<span className="text-emerald-400">Tech</span>
+                    </span>
+                    <span className="block text-[10px] uppercase font-bold tracking-widest text-emerald-400 -mt-0.5">
+                      Clinician Portal
+                    </span>
+                  </div>
+                </Link>
+                <button
+                  onClick={toggleSidebar}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0"
+                  title="Collapse Sidebar"
+                  aria-label="Collapse Sidebar"
+                >
+                  <PanelLeftClose className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
-            <nav className="space-y-1.5">
+            {/* Navigation Items */}
+            <nav className="space-y-1.5 overflow-y-auto no-scrollbar flex-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
+
+                if (isCollapsed) {
+                  return (
+                    <div key={item.href} className="relative group flex justify-center">
+                      <Link
+                        href={item.href}
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                          isActive
+                            ? "text-white bg-emerald-600 shadow-md shadow-emerald-600/30"
+                            : "text-slate-400 hover:text-white hover:bg-slate-800/80"
+                        }`}
+                        title={item.name}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </Link>
+                      {/* Floating Tooltip */}
+                      <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 top-1/2 -translate-y-1/2 border border-slate-700">
+                        {item.name}
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-2xl font-semibold text-xs transition-all ${
+                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-all ${
                       isActive
                         ? "text-white bg-emerald-600 shadow-md shadow-emerald-600/30 font-bold"
                         : "text-slate-400 hover:text-white hover:bg-slate-800/80"
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.name}</span>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{item.name}</span>
                   </Link>
                 );
               })}
             </nav>
           </div>
 
-          <div className="pt-6 border-t border-slate-800 space-y-3">
-            <div className="px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center gap-2 text-[11px] text-emerald-400 font-semibold">
-              <ShieldAlert className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>Medical License Verified</span>
-            </div>
+          {/* Bottom Area (License & Logout) */}
+          <div className={`pt-4 border-t border-slate-800 space-y-2.5 ${isCollapsed ? "flex flex-col items-center" : ""}`}>
+            {isCollapsed ? (
+              <>
+                {/* Collapsed License Indicator */}
+                <div className="relative group">
+                  <div
+                    className="w-11 h-11 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-center cursor-default"
+                    title="Medical License Verified"
+                  >
+                    <ShieldAlert className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 top-1/2 -translate-y-1/2 border border-slate-700">
+                    Medical License Verified
+                  </div>
+                </div>
 
-            <button 
-              onClick={handleLogout}
-              className="flex items-center space-x-3 text-red-400 hover:bg-red-950/40 hover:text-red-300 px-4 py-2.5 rounded-xl font-semibold text-xs transition-colors w-full"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Log out</span>
-            </button>
+                {/* Collapsed Logout */}
+                <div className="relative group">
+                  <button
+                    onClick={handleLogout}
+                    className="w-11 h-11 rounded-xl text-slate-400 hover:text-red-300 hover:bg-red-950/40 flex items-center justify-center transition-colors"
+                    title="Sign Out"
+                    aria-label="Sign Out"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                  <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-xl whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150 top-1/2 -translate-y-1/2 border border-slate-700">
+                    Log Out
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center gap-2 text-[11px] text-emerald-400 font-semibold truncate">
+                  <ShieldAlert className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <span className="truncate">Medical License Verified</span>
+                </div>
+
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center space-x-3 text-red-400 hover:bg-red-950/40 hover:text-red-300 px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-colors w-full"
+                >
+                  <LogOut className="w-4 h-4 flex-shrink-0" />
+                  <span>Log out</span>
+                </button>
+              </>
+            )}
           </div>
         </aside>
 

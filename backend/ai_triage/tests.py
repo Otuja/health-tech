@@ -116,3 +116,51 @@ class AITriageRoutingAndAPITests(APITestCase):
         self.assertIn("routing", response.data)
         self.assertTrue(response.data["routing"]["is_emergency"])
         self.assertEqual(response.data["routing"]["recommended_doctor"]["name"], "Babatunde Adeleke")
+
+    def test_nutrition_intent_advice_on_eba(self):
+        self.client.force_authenticate(user=self.patient)
+        chat_url = reverse('triage_chat')
+        response = self.client.post(chat_url, {"message": "i wanted to eat eba today, is it healthy?"}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["category"], "NUTRITION_DIET")
+        self.assertFalse(response.data["is_emergency"])
+        # Response should contain dietary/nutrition advice rather than treating eba as an acute disease
+        self.assertTrue("Eba" in response.data["analysis"] or "nutrition" in response.data["analysis"].lower() or "diet" in response.data["analysis"].lower())
+
+    def test_ndpr_session_lifecycle_and_privacy_isolation(self):
+        self.client.force_authenticate(user=self.patient)
+        chat_url = reverse('triage_chat')
+        
+        # 1. Send first message to create session
+        res1 = self.client.post(chat_url, {"message": "What should I eat for lower blood pressure?"}, format='json')
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        session_id = res1.data["session_id"]
+        
+        # 2. Send follow-up message in same session
+        res2 = self.client.post(chat_url, {"session_id": session_id, "message": "Can I include spinach and avocado?"}, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res2.data["session_id"], session_id)
+
+        # 3. Retrieve sessions list
+        sessions_url = reverse('triage_sessions')
+        list_res = self.client.get(sessions_url)
+        self.assertEqual(list_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_res.data), 1)
+        self.assertEqual(list_res.data[0]["id"], session_id)
+        self.assertEqual(list_res.data[0]["message_count"], 4) # 2 user, 2 ai
+
+        # 4. Privacy isolation: another patient cannot view this session
+        other_patient = User.objects.create_user(username='other_patient', password='pw', role='PATIENT')
+        other_client = APIClient()
+        other_client.force_authenticate(user=other_patient)
+        detail_url = reverse('triage_session_detail', kwargs={'session_id': session_id})
+        
+        unauth_res = other_client.get(detail_url)
+        self.assertEqual(unauth_res.status_code, status.HTTP_404_NOT_FOUND)
+
+        # 5. Right to Erasure: patient can delete their session
+        del_res = self.client.delete(detail_url)
+        self.assertEqual(del_res.status_code, status.HTTP_200_OK)
+        
+        verify_res = self.client.get(detail_url)
+        self.assertEqual(verify_res.status_code, status.HTTP_404_NOT_FOUND)

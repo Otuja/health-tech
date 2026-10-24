@@ -1,15 +1,20 @@
 import { toast } from "sonner";
 
-const PROD_API_URL = "https://healthtech-backend-9xpb.onrender.com";
+export const PROD_API_URL = "https://healthtech-backend-9xpb.onrender.com";
+export const LOCAL_API_URL = "http://localhost:8000";
 
 export const getApiBase = (): string => {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("healthtech_api_url");
+    if (saved) return saved.replace(/\/+$/, "");
+  }
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
   }
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return "http://localhost:8000";
+      return LOCAL_API_URL;
     }
     // Local LAN IP for mobile dev testing
     if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
@@ -17,6 +22,29 @@ export const getApiBase = (): string => {
     }
   }
   return PROD_API_URL;
+};
+
+export const setApiBase = (url: string) => {
+  if (typeof window === "undefined") return;
+  const clean = url.replace(/\/+$/, "");
+  localStorage.setItem("healthtech_api_url", clean);
+  window.dispatchEvent(new Event("healthtech_api_changed"));
+};
+
+export const checkBackendHealth = async (baseUrl: string): Promise<boolean> => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/admin/`, {
+      method: "GET",
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    clearTimeout(timeoutId);
+    return res.status < 500;
+  } catch {
+    return false;
+  }
 };
 
 export const API_BASE = getApiBase();
@@ -65,8 +93,9 @@ export async function authFetch(
   input: string | URL | Request,
   init: RequestInit = {}
 ): Promise<Response> {
-  const url = typeof input === "string" && input.startsWith("/")
-    ? `${API_BASE}${input}`
+  const base = getApiBase();
+  let url = typeof input === "string" && input.startsWith("/")
+    ? `${base}${input}`
     : input;
 
   const token = getAccessToken();
@@ -76,7 +105,22 @@ export async function authFetch(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(url, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...init, headers });
+  } catch (err) {
+    if (typeof url === "string" && (url.includes("localhost:8000") || url.includes("127.0.0.1:8000"))) {
+      const fallbackUrl = url.replace(/http:\/\/(localhost|127\.0\.0\.1):8000/, PROD_API_URL);
+      try {
+        response = await fetch(fallbackUrl, { ...init, headers });
+        setApiBase(PROD_API_URL);
+      } catch {
+        throw err;
+      }
+    } else {
+      throw err;
+    }
+  }
 
   // If unauthorized and we have a refresh token, attempt token refresh
   if (response.status === 401) {
@@ -90,7 +134,8 @@ export async function authFetch(
     if (!isRefreshing) {
       isRefreshing = true;
       try {
-        const refreshRes = await fetch(`${API_BASE}/api/token/refresh/`, {
+        const activeBase = getApiBase();
+        const refreshRes = await fetch(`${activeBase}/api/token/refresh/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refresh: refreshToken }),

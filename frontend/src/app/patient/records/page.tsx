@@ -274,8 +274,8 @@ export default function PatientRecords() {
       {/* TAB 1: PATIENT UPLOADED DOCUMENTS */}
       {activeTab === "documents" && (
         <div className="space-y-6">
-          {/* Category Filter Pills (Swipeable Carousel on Mobile) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs whitespace-nowrap">
+          {/* Category Filter Pills (Smooth swipeable list on mobile) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs whitespace-nowrap scroll-smooth touch-pan-x -mx-1 px-1">
             <span className="text-xs font-semibold text-slate-500 mr-1 flex-shrink-0">Filter:</span>
             {[
               { id: "ALL", label: "All Documents" },
@@ -289,7 +289,7 @@ export default function PatientRecords() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors flex-shrink-0 active:scale-95 ${
                   selectedCategory === cat.id
                     ? "bg-slate-900 text-white shadow-sm"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"

@@ -13,73 +13,56 @@ export default function AppSplashScreen() {
   const [statusText, setStatusText] = useState("Initializing clinical gateway...");
 
   useEffect(() => {
-    // Check if splash was already shown in this active session
-    const hasSeenSplash = typeof window !== "undefined" ? sessionStorage.getItem("healthtech_splash_seen") : null;
-    
-    // Only show splash on initial root / entry visits to simulate native app launch
-    const isRootOrAuth = pathname === "/" || pathname === "/login" || pathname === "/register";
-    
-    // Check if running as installed standalone PWA
-    const isStandalone = typeof window !== "undefined" && (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true
-    );
+    if (typeof window === "undefined") return;
 
-    // If already seen in this session and not standalone fresh launch, skip
-    if (hasSeenSplash && !isStandalone) {
+    // Check if running as installed standalone PWA
+    const isStandalone = 
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+
+    // Splash screen is strictly for installed mobile PWA standalone launch, not regular web browsing
+    if (!isStandalone) {
       return;
     }
 
-    // Only launch splash if visiting root or auth or standalone
-    if (isRootOrAuth || isStandalone) {
-      setShowSplash(true);
-      sessionStorage.setItem("healthtech_splash_seen", "true");
+    // Check if splash was already shown in this standalone session
+    const hasSeenSplash = sessionStorage.getItem("healthtech_pwa_splash_seen");
+    if (hasSeenSplash) {
+      return;
+    }
 
-      // Progress Simulation across 1.8 seconds
+    // Only launch splash if launching at root
+    if (pathname === "/") {
+      setShowSplash(true);
+      sessionStorage.setItem("healthtech_pwa_splash_seen", "true");
+
       const startTime = Date.now();
-      const duration = 1800;
+      const duration = 1200;
 
       const interval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         const currentProgress = Math.min(Math.round((elapsed / duration) * 100), 100);
         setProgress(currentProgress);
 
-        if (currentProgress < 35) {
+        if (currentProgress < 40) {
           setStatusText("Establishing NDPR encrypted session...");
-        } else if (currentProgress < 75) {
-          setStatusText("Verifying clinical & patient credentials...");
+        } else if (currentProgress < 80) {
+          setStatusText("Verifying clinical credentials...");
         } else {
           setStatusText("Launching HealthTech portal...");
         }
 
         if (elapsed >= duration) {
           clearInterval(interval);
-          
-          // Smart Auto-Routing on app launch (like native mobile apps):
-          const token = localStorage.getItem("access_token");
-          const role = localStorage.getItem("user_role");
-
-          // If user is on landing or login and already authenticated, auto-route into dashboard
-          if (token && role && (pathname === "/" || pathname === "/login")) {
-            if (role === "DOCTOR") {
-              router.push("/doctor/dashboard");
-            } else if (role === "ADMIN") {
-              router.push("/admin/dashboard");
-            } else {
-              router.push("/patient/dashboard");
-            }
-          }
-
-          // Dismiss splash smoothly
           setTimeout(() => {
             setShowSplash(false);
-          }, 300);
+          }, 200);
         }
       }, 30);
 
       return () => clearInterval(interval);
     }
-  }, [pathname, router]);
+  }, [pathname]);
 
   if (!showSplash) return null;
 
