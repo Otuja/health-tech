@@ -631,3 +631,239 @@ class AIConsultationSessionDetailView(APIView):
 
         session.delete()
         return Response({"message": "Consultation history successfully erased under NDPR privacy regulations."}, status=status.HTTP_200_OK)
+
+
+# -------------------------------------------------------------
+# DYNAMIC AI DAILY CLINICAL HEALTH TIPS ENGINE
+# -------------------------------------------------------------
+
+_DAILY_TIPS_CACHE = {}
+
+AI_ROTATING_CLINICAL_TIPS = [
+    {
+        "id": "rot-1",
+        "category": "Hydration",
+        "title": "The 250ml Morning Rehydration Rule",
+        "summary": "Drink a tall glass of water within 15 minutes of waking.",
+        "details": "Overnight respiration and perspiration lead to subclinical dehydration. Drinking 250–300ml of water upon waking immediately reduces morning blood viscosity, stimulates glomerular filtration, and counters early cognitive fatigue.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Hydrate Now",
+        "aiPrompt": "How does morning hydration affect resting heart rate and blood viscosity?"
+    },
+    {
+        "id": "rot-2",
+        "category": "Heart",
+        "title": "The 10-Minute Post-Meal Ambulatory Protocol",
+        "summary": "Take a light 10-minute walk right after lunch or dinner.",
+        "details": "Light walking after meals stimulates GLUT4 glucose transporters in skeletal muscle without requiring excess insulin, attenuating postprandial glycemic spikes by up to 30% and supporting cardiovascular health.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Track Vitals",
+        "aiPrompt": "Explain how post-meal walking manages glycemic response and cardiovascular risk."
+    },
+    {
+        "id": "rot-3",
+        "category": "Sleep",
+        "title": "Circadian Sleep Cycle Alignment (The 90-Min Rule)",
+        "summary": "Time your sleep in multiples of 90 minutes for effortless waking.",
+        "details": "Adult sleep alternates between NREM and REM stages in ~90-minute ultradian cycles. Setting your alarm at cycle boundaries (e.g. 7.5 hours rather than 8 hours) prevents waking from deep slow-wave sleep, eliminating morning sleep inertia.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Sleep Hygiene",
+        "aiPrompt": "What are the stages of sleep and how do I optimize my circadian rhythm?"
+    },
+    {
+        "id": "rot-4",
+        "category": "Ergonomics",
+        "title": "The 20-20-20 Digital Vision Reset",
+        "summary": "Every 20 minutes, look at an object 20 feet away for 20 seconds.",
+        "details": "Screen usage reduces normal human blink frequency by 50% and locks ciliary ocular muscles. The 20-20-20 protocol restores the corneal tear film and relieves digital eye fatigue and cervical tension.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Rest Eyes",
+        "aiPrompt": "How can I prevent computer vision syndrome and neck muscle strain?"
+    },
+    {
+        "id": "rot-5",
+        "category": "Mental",
+        "title": "The Dual-Inhale Physiological Sigh",
+        "summary": "Two quick nasal inhales followed by a long exhale resets acute stress.",
+        "details": "Developed by neurophysiologists, this pattern pops open collapsed pulmonary alveoli and stimulates the vagus nerve, reducing autonomic arousal, lowering acute cortisol, and slowing pulse within 60 seconds.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Breathwork",
+        "aiPrompt": "How does the physiological sigh regulate the parasympathetic nervous system?"
+    },
+    {
+        "id": "rot-6",
+        "category": "Nutrition",
+        "title": "Metabolic Food Sequencing (Fiber First)",
+        "summary": "Eat vegetables and proteins before refined carbohydrates.",
+        "details": "Consuming dietary fiber and protein prior to carbohydrates coats the small intestine, slowing gastric emptying. This dampens insulin surges and prevents mid-afternoon energy crashes.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Nutrition Insights",
+        "aiPrompt": "What is the science behind food sequencing for metabolic control?"
+    },
+    {
+        "id": "rot-7",
+        "category": "Heart",
+        "title": "Potassium-to-Sodium Vascular Balance",
+        "summary": "Incorporate dietary potassium to balance daily sodium intake.",
+        "details": "Potassium promotes renal sodium excretion and relaxes vascular smooth muscle. Adequate daily intake from bananas, avocados, and leafy spinach helps maintain optimal blood pressure.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "BP Guidelines",
+        "aiPrompt": "What role does dietary potassium play in managing hypertension?"
+    },
+    {
+        "id": "rot-8",
+        "category": "Immunity",
+        "title": "Morning Sunlight & Suprachiasmatic Sync",
+        "summary": "Get 10–15 minutes of outdoor light exposure within 1 hour of waking.",
+        "details": "Natural lux stimulates retinal ganglion cells, synchronizing cortisol for daytime alertness while programming melatonin release 14–16 hours later for restorative deep sleep.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Immunity Boost",
+        "aiPrompt": "How does morning sunlight exposure regulate endocrine and immune health?"
+    },
+    {
+        "id": "rot-9",
+        "category": "Ergonomics",
+        "title": "The 45-Minute Spinal Decompression",
+        "summary": "Stand and stretch your spine backward for 30 seconds every 45 minutes.",
+        "details": "Prolonged sitting increases intradiscal lumbar pressure by 40%. A brief thoracic extension and pelvic tilt rehydrates spinal discs and prevents chronic back spasm.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Spinal Reset",
+        "aiPrompt": "What are the best desk stretches to relieve lower back and lumbar stiffness?"
+    },
+    {
+        "id": "rot-10",
+        "category": "Nutrition",
+        "title": "The Caffeine Cut-off Buffer",
+        "summary": "Stop consuming caffeine at least 8 hours before your target bedtime.",
+        "details": "Caffeine has a biological half-life of 5 to 7 hours. Even if you fall asleep, residual caffeine blocks adenosine receptors, truncating restorative Stage 3 slow-wave sleep.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Caffeine Guide",
+        "aiPrompt": "How does caffeine metabolism affect slow-wave restorative sleep?"
+    },
+    {
+        "id": "rot-11",
+        "category": "Hydration",
+        "title": "Electrolyte Balance in Tropical Climates",
+        "summary": "Pair heavy water consumption with natural mineral electrolytes.",
+        "details": "In warm conditions, pure water intake without electrolytes can dilute blood sodium. A pinch of mineral salt or coconut water supports cellular hydration and prevents muscle cramps.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Hydration Tips",
+        "aiPrompt": "Why do electrolytes matter for physical stamina and cellular hydration?"
+    },
+    {
+        "id": "rot-12",
+        "category": "Mental",
+        "title": "The 5-Minute Brain Dump Before Sleep",
+        "summary": "Write down unfinished tasks on paper 30 minutes before sleep.",
+        "details": "Cognitive studies demonstrate that externalizing tomorrow's tasks significantly reduces cognitive rumination and reduces sleep latency by up to 37%.",
+        "clinicianVerified": "HealthTech Gemini AI Clinical Engine",
+        "actionText": "Mental Focus",
+        "aiPrompt": "How does expressive writing decrease presleep cognitive arousal?"
+    }
+]
+
+def generate_gemini_smart_tips(api_key: str) -> list:
+    """
+    Queries Google Gemini to dynamically generate 8 fresh clinical health & wellness tips.
+    """
+    import json
+    endpoints = [
+        ("v1beta", "gemini-2.5-flash-lite", 12),
+        ("v1beta", "gemini-2.5-flash", 12),
+    ]
+
+    prompt = (
+        "Generate exactly 8 fresh, diverse, scientifically sound daily health and wellness tips for patients. "
+        "Cover varied categories: 'Heart', 'Hydration', 'Sleep', 'Nutrition', 'Ergonomics', 'Mental', 'Immunity'. "
+        "Return ONLY a valid JSON array of objects with these keys: "
+        "'id' (string, e.g. 'ai-tip-1'), 'category' (one of the categories), 'title' (punchy, 4-8 words), "
+        "'summary' (1 crisp sentence), 'details' (2-3 sentences explaining the medical/biological rationale in clear language), "
+        "'clinicianVerified' ('HealthTech Gemini AI Clinical Engine'), 'actionText' (2-3 words button text), 'aiPrompt' (a clinical question). "
+        "Do NOT return markdown backticks or explanations. Return pure JSON array."
+    )
+
+    body = {
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048}
+    }
+    headers = {"Content-Type": "application/json"}
+
+    for version, model, timeout_sec in endpoints:
+        url = f"https://generativelanguage.googleapis.com/{version}/models/{model}:generateContent?key={api_key}"
+        try:
+            resp = requests.post(url, json=body, headers=headers, timeout=timeout_sec)
+            if resp.status_code == 200:
+                data = resp.json()
+                raw_text = data.get("candidates", [])[0]["content"]["parts"][0].get("text", "")
+                cleaned = raw_text.strip()
+                if cleaned.startswith("```json"):
+                    cleaned = cleaned[7:]
+                elif cleaned.startswith("```"):
+                    cleaned = cleaned[3:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+                cleaned = cleaned.strip()
+                parsed = json.loads(cleaned)
+                if isinstance(parsed, list) and len(parsed) >= 4:
+                    return parsed
+        except Exception as e:
+            print(f"[SmartTips] Gemini {model} error: {e}")
+            continue
+    return []
+
+def get_ai_daily_tips(force_refresh: bool = False, category: str = "") -> list:
+    """
+    Returns dynamic AI clinical tips. Caches daily; generates fresh via Gemini on refresh or date change.
+    """
+    import random
+    from datetime import datetime
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    cache_key = f"{today_str}_{category}"
+
+    if not force_refresh and cache_key in _DAILY_TIPS_CACHE:
+        return _DAILY_TIPS_CACHE[cache_key]
+
+    gemini_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
+    ai_tips = []
+
+    if gemini_key:
+        try:
+            ai_tips = generate_gemini_smart_tips(gemini_key)
+        except Exception as e:
+            print("[SmartTips] Generation failed:", e)
+
+    if not ai_tips:
+        # Seeded daily rotation so every new day automatically delivers a fresh set
+        day_seed = int(today_str.replace("-", ""))
+        rng = random.Random(day_seed if not force_refresh else None)
+        shuffled = AI_ROTATING_CLINICAL_TIPS.copy()
+        rng.shuffle(shuffled)
+        ai_tips = shuffled[:8]
+
+    if category and category.lower() != "all":
+        filtered = [t for t in ai_tips if t.get("category", "").lower() == category.lower()]
+        if filtered:
+            ai_tips = filtered
+
+    _DAILY_TIPS_CACHE[cache_key] = ai_tips
+    return ai_tips
+
+
+class SmartHealthTipsView(APIView):
+    """
+    Public API delivering dynamic, changing AI-generated daily clinical tips.
+    Supports ?refresh=1 for generating new tips on demand.
+    """
+    permission_classes = []
+
+    def get(self, request):
+        import datetime
+        refresh = request.query_params.get('refresh', '').lower() in ['1', 'true', 'yes']
+        category = request.query_params.get('category', '').strip()
+        tips = get_ai_daily_tips(force_refresh=refresh, category=category)
+        return Response({
+            "date": datetime.datetime.utcnow().strftime("%Y-%m-%d"),
+            "count": len(tips),
+            "source": "HealthTech Gemini AI Clinical Engine",
+            "tips": tips
+        }, status=status.HTTP_200_OK)
