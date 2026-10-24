@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import PWAInstaller from '@/components/PWAInstaller';
 import AppSplashScreen from '@/components/AppSplashScreen';
+import SmartHealthTips from '@/components/SmartHealthTips';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-slate-50 text-slate-900 antialiased selection:bg-emerald-500 selection:text-white`}>
         <AppSplashScreen />
         {children}
+        <SmartHealthTips />
         <PWAInstaller />
         <Toaster position="top-right" richColors closeButton />
       </body>
